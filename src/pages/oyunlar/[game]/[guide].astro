@@ -1,0 +1,218 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import VideoCard from '../../../components/VideoCard.astro';
+import SubscribeCTA from '../../../components/SubscribeCTA.astro';
+import { href } from '../../../lib/href';
+import { guideSlug, guideUrl, sortGuides } from '../../../lib/guides';
+import { getVideoById, thumbnailUrl, formatDate } from '../../../lib/videos';
+import { GUIDE_CATEGORIES, DIFFICULTIES } from '../../../lib/constants';
+
+export async function getStaticPaths() {
+  const [guides, games] = await Promise.all([
+    getCollection('guides', ({ data }) => !data.draft),
+    getCollection('games', ({ data }) => !data.draft),
+  ]);
+
+  const gameById = new Map(games.map((g) => [g.id, g]));
+
+  return guides
+    // Oyunu silinmiş/draft olan rehber sayfa üretmesin
+    .filter((guide) => gameById.has(guide.data.game))
+    .map((guide) => ({
+      params: { game: guide.data.game, guide: guideSlug(guide) },
+      props: { guide, game: gameById.get(guide.data.game)! },
+    }));
+}
+
+const { guide, game } = Astro.props;
+const { title, description, category, difficulty, videoId, updated } = guide.data;
+
+const { Content } = await render(guide);
+
+const cat = GUIDE_CATEGORIES[category];
+const diff = DIFFICULTIES[difficulty];
+const video = videoId ? getVideoById(videoId) : undefined;
+
+// Aynı oyunun diğer rehberleri
+const siblings = sortGuides(
+  await getCollection(
+    'guides',
+    ({ data, id }) => data.game === game.id && !data.draft && id !== guide.id,
+  ),
+);
+
+/**
+ * Video için yapısal veri — Google arama sonuçlarında video rozeti gösterir.
+ * Sadece elle seçilmiş bir video varsa ekliyoruz.
+ */
+const videoJsonLd = video
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: video.title,
+      description: video.description.slice(0, 300),
+      thumbnailUrl: thumbnailUrl(video.id, 'maxres'),
+      uploadDate: video.published,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${video.id}`,
+      contentUrl: video.url,
+    }
+  : null;
+---
+
+<BaseLayout
+  title={`${title} — ${game.data.title}`}
+  description={description}
+  accent={game.data.accentColor}
+  ogImage={videoId ? thumbnailUrl(videoId, 'maxres') : undefined}
+>
+  {videoJsonLd && (
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(videoJsonLd)} slot="head" />
+  )}
+
+  <article class="wrap-narrow">
+    <nav class="crumbs" aria-label="Konum">
+      <a href={href('/')}>Ana Sayfa</a>
+      <span aria-hidden="true">/</span>
+      <a href={href('/oyunlar')}>Oyunlar</a>
+      <span aria-hidden="true">/</span>
+      <a href={href(`/oyunlar/${game.id}`)}>{game.data.title}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{title}</span>
+    </nav>
+
+    <header class="ghead reveal">
+      <div class="ghead__tags">
+        <span class="badge">{cat.icon} {cat.label}</span>
+        <span class="badge" style={`--accent:${diff.color}`}>⚡ {diff.label}</span>
+        <span class="ghead__date">Güncellendi: {formatDate(updated)}</span>
+      </div>
+
+      <h1 class="ghead__title">{title}</h1>
+      <p class="ghead__desc">{description}</p>
+    </header>
+
+    {video && (
+      <div class="gvideo reveal">
+        <VideoCard video={video} featured headingLevel={2} />
+        <p class="gvideo__note">
+          🎬 Yazıyı okumadan önce videoyu izlemen daha kolay anlamanı sağlar.
+        </p>
+      </div>
+    )}
+
+    <div class="prose reveal">
+      <Content />
+    </div>
+
+    <div class="gback reveal">
+      <a class="btn btn-ghost" href={href(`/oyunlar/${game.id}`)}>
+        ← {game.data.title} sayfasına dön
+      </a>
+    </div>
+  </article>
+
+  {siblings.length > 0 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Diğer rehberler</h2>
+          <p class="section-sub">{game.data.title} için diğer anlatımlar.</p>
+        </div>
+      </div>
+
+      <div class="sibs stagger">
+        {siblings.map((s) => {
+          const sc = GUIDE_CATEGORIES[s.data.category];
+          const sd = DIFFICULTIES[s.data.difficulty];
+          return (
+            <a class="sib card reveal" href={guideUrl(s)}>
+              <span class="sib__icon" aria-hidden="true">{sc.icon}</span>
+              <span class="sib__cat">{sc.label}</span>
+              <h3 class="sib__title">{s.data.title}</h3>
+              <p class="sib__desc">{s.data.description}</p>
+              <span class="badge sib__diff" style={`--accent:${sd.color}`}>{sd.label}</span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  )}
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<style>
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-5);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--ink-dim);
+    flex-wrap: wrap;
+  }
+  .crumbs a { color: var(--ink-soft); text-decoration: none; }
+  .crumbs a:hover { color: var(--accent-2); }
+
+  .ghead { margin-bottom: var(--sp-6); }
+
+  .ghead__tags {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--sp-4);
+  }
+
+  .ghead__date { color: var(--ink-dim); font-size: var(--fs-xs); font-weight: 600; }
+
+  .ghead__title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+
+  .ghead__desc { color: var(--ink-soft); font-size: var(--fs-lg); }
+
+  .gvideo { margin-bottom: var(--sp-7); }
+
+  .gvideo__note {
+    margin-top: var(--sp-3);
+    padding: var(--sp-3);
+    background: var(--accent-soft);
+    border-radius: var(--r-md);
+    color: var(--ink-soft);
+    font-size: var(--fs-sm);
+    text-align: center;
+  }
+
+  .gback { margin-top: var(--sp-7); }
+
+  /* ---- Diğer rehberler ---- */
+  .sibs {
+    display: grid;
+    gap: var(--sp-4);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  }
+
+  .sib {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-4);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .sib__icon { font-size: 1.9rem; }
+
+  .sib__cat {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--accent-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sib__title { font-size: var(--fs-lg); }
+  .sib__desc { color: var(--ink-soft); font-size: var(--fs-sm); flex: 1; }
+  .sib__diff { align-self: flex-start; margin-top: var(--sp-2); }
+</style>

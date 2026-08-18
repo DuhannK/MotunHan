@@ -1,0 +1,53 @@
+name: Siteyi yayınla
+
+on:
+  # main'e her push'ta
+  push:
+    branches: [main]
+
+  # Her gün 06:00 UTC (Türkiye 09:00) — yeni YouTube videolarını çeker.
+  # Site statik olduğu için videoların görünmesi ancak yeniden build ile olur.
+  schedule:
+    - cron: '0 6 * * *'
+
+  # Actions sekmesinden elle tetiklemek için
+  workflow_dispatch:
+
+# GitHub Pages'e yayın için gereken izinler
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Aynı anda tek yayın çalışsın; sıradakini iptal etme, bitmesini bekle
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Derle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu çek
+        uses: actions/checkout@v7
+
+      # withastro/action: Node kurar, bağımlılıkları yükler, build alır
+      # ve çıktıyı Pages artifact'i olarak yükler.
+      # `npm run build` öncesi `prebuild` otomatik çalışır -> videolar tazelenir.
+      - name: Astro sitesini derle
+        uses: withastro/action@v6
+        with:
+          node-version: 22
+
+  deploy:
+    name: Yayınla
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages'e gönder
+        id: deployment
+        uses: actions/deploy-pages@v5

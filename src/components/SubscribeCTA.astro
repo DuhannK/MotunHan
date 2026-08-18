@@ -1,0 +1,59 @@
+---
+import { YOUTUBE } from '../lib/constants';
+---
+
+<section class="cta">
+  <div class="wrap cta__inner reveal" data-anim="zoom">
+    <span class="cta__icon anim-float" aria-hidden="true">🔔</span>
+    <h2 class="cta__title">Yeni videoları kaçırmak istemez misin?</h2>
+    <p class="cta__text">
+      Her hafta yeni rehberler, event anlatımları ve karakter çekilişleri.
+      Abone ol ve zili aç, yeni video çıkınca ilk sen öğren!
+    </p>
+    <a
+      class="btn btn-lg btn-yt anim-pulse"
+      href={YOUTUBE.subscribeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      ▶ Kanala Abone Ol
+    </a>
+    <p class="cta__note">Ücretsiz · Üyelik gerekmez · İstediğin zaman çıkabilirsin</p>
+  </div>
+</section>
+
+<style>
+  .cta {
+    padding-block: var(--sp-8);
+    background:
+      radial-gradient(70% 100% at 50% 0%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%);
+  }
+
+  .cta__inner {
+    max-width: 62ch;
+    margin-inline: auto;
+    padding: var(--sp-7) var(--sp-5);
+    text-align: center;
+    background: var(--bg-2);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .cta__icon { display: block; font-size: 3rem; margin-bottom: var(--sp-3); }
+
+  .cta__title { font-size: var(--fs-2xl); margin-bottom: var(--sp-3); }
+
+  .cta__text {
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+    margin-bottom: var(--sp-5);
+  }
+
+  .cta__note {
+    margin-top: var(--sp-4);
+    color: var(--ink-dim);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+  }
+</style>

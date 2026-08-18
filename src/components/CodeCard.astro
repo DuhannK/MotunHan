@@ -1,0 +1,158 @@
+---
+import { formatDate } from '../lib/videos';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  entry: CollectionEntry<'codes'>;
+  gameTitle?: string;
+}
+
+const { entry, gameTitle } = Astro.props;
+const { code, reward, status, addedAt } = entry.data;
+const isActive = status === 'active';
+---
+
+<article class={`code card ${isActive ? '' : 'code--expired'}`}>
+  <div class="code__top">
+    <span class={`badge ${isActive ? 'code__badge--ok' : 'code__badge--old'}`}>
+      {isActive ? '✅ Çalışıyor' : '⌛ Süresi doldu'}
+    </span>
+    {gameTitle && <span class="code__game">{gameTitle}</span>}
+  </div>
+
+  <div class="code__row">
+    <code class="code__value">{code}</code>
+    <button
+      class="code__copy"
+      type="button"
+      data-copy={code}
+      aria-label={`${code} kodunu kopyala`}
+      disabled={!isActive}
+    >
+      <span data-copy-label>Kopyala</span>
+    </button>
+  </div>
+
+  <p class="code__reward">🎁 {reward}</p>
+  <p class="code__date">Eklendi: {formatDate(addedAt)}</p>
+</article>
+
+<script>
+  /**
+   * Kod kopyalama. Delegasyon document üzerinde — ClientRouter sayfa
+   * geçişlerinde document'i koruduğu için bir kez bağlamak yeterli.
+   */
+  const FLAG = '__motunhanCopy';
+
+  if (!(FLAG in window)) {
+    (window as any)[FLAG] = true;
+
+    document.addEventListener('click', async (event) => {
+      const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy]');
+      if (!btn || btn.disabled) return;
+
+      const code = btn.dataset.copy ?? '';
+      const label = btn.querySelector<HTMLElement>('[data-copy-label]');
+      if (!label) return;
+
+      const done = (text: string, ok: boolean) => {
+        label.textContent = text;
+        btn.classList.toggle('is-ok', ok);
+        btn.classList.toggle('is-fail', !ok);
+        window.setTimeout(() => {
+          label.textContent = 'Kopyala';
+          btn.classList.remove('is-ok', 'is-fail');
+        }, 1800);
+      };
+
+      try {
+        await navigator.clipboard.writeText(code);
+        done('✓ Kopyalandı!', true);
+      } catch {
+        // Pano izni yoksa (eski tarayıcı / güvensiz bağlam) metni seçili hale getir
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        // execCommand kullanimdan kalkti ama Clipboard API'nin calismadigi
+        // (guvensiz baglam / eski tarayici) durumda tek yedek bu.
+        const legacy = document as Document & { execCommand?: (c: string) => boolean };
+        const ok = legacy.execCommand?.('copy') ?? false;
+        ta.remove();
+        done(ok ? '✓ Kopyalandı!' : 'Elle kopyala', ok);
+      }
+    });
+  }
+</script>
+
+<style>
+  .code {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    height: 100%;
+  }
+
+  .code--expired { opacity: 0.6; }
+
+  .code__top { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+  .code__badge--ok {
+    background: color-mix(in oklab, var(--ok) 20%, transparent);
+    border-color: color-mix(in oklab, var(--ok) 50%, transparent);
+    color: var(--ok);
+  }
+
+  .code__badge--old {
+    background: rgb(255 255 255 / 0.06);
+    border-color: rgb(255 255 255 / 0.14);
+    color: var(--ink-dim);
+  }
+
+  .code__game { margin-left: auto; color: var(--ink-dim); font-size: var(--fs-xs); font-weight: 700; }
+
+  .code__row { display: flex; align-items: stretch; gap: var(--sp-2); }
+
+  .code__value {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: var(--sp-3);
+    background: var(--bg-3);
+    border: 2px dashed var(--accent-line);
+    border-radius: var(--r-md);
+    font-family: var(--font-display);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    word-break: break-all;
+    text-align: center;
+  }
+
+  .code__copy {
+    flex: none;
+    min-width: 108px;
+    padding: var(--sp-3);
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: var(--r-md);
+    font-family: var(--font-display);
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform var(--t-fast) var(--ease-bounce), background var(--t-mid), filter var(--t-fast);
+  }
+
+  .code__copy:hover:not(:disabled) { transform: scale(1.05); filter: brightness(1.1); }
+  .code__copy:disabled { background: var(--bg-3); color: var(--ink-dim); cursor: not-allowed; }
+  .code__copy.is-ok { background: var(--ok); color: #06281c; }
+  .code__copy.is-fail { background: var(--warn); color: #2a1e02; }
+
+  .code__reward { color: var(--ink-soft); font-size: var(--fs-sm); margin-top: auto; }
+  .code__date { color: var(--ink-dim); font-size: var(--fs-xs); }
+</style>

@@ -1,0 +1,61 @@
+[
+  {
+    "id": "ae-gohan-prodigy",
+    "name": "Gohan (Prodigy)",
+    "game": "anime-expeditions",
+    "tier": "S",
+    "rarity": "Secret",
+    "howToGet": "Secret çekilişinden çıkıyor. Çok nadir — MotunHan'ın çekiliş videosunda ne kadar zor olduğunu görebilirsin.",
+    "element": "Güç",
+    "description": "Oyunun en nadir karakterlerinden. Secret nadirliğinde ve çok güçlü."
+  },
+  {
+    "id": "ae-manga-gohan",
+    "name": "Manga Gohan",
+    "game": "anime-expeditions",
+    "tier": "S",
+    "rarity": "Legendary",
+    "howToGet": "Çekilişten çıkıyor. Alma videosu kanalda mevcut.",
+    "element": "Güç",
+    "description": "Dragon Ball serisinin güçlü karakterlerinden."
+  },
+  {
+    "id": "ae-itachi",
+    "name": "Itachi",
+    "game": "anime-expeditions",
+    "tier": "S",
+    "rarity": "Legendary",
+    "howToGet": "Çekilişten çıkıyor. MotunHan bu karakteri +1050 trait basarak güçlendirdi.",
+    "element": "Genjutsu",
+    "description": "Naruto serisinden efsane karakter. Trait ile çok güçleniyor."
+  },
+  {
+    "id": "ae-cubert",
+    "name": "Cubert",
+    "game": "anime-expeditions",
+    "tier": "A",
+    "rarity": "Epic",
+    "howToGet": "Çekilişten çıkıyor. Kanalda 'Cubert Alana Kadar' videosunda süreç anlatılıyor.",
+    "description": "Almak için sabır isteyen karakterlerden."
+  },
+  {
+    "id": "ae-goku",
+    "name": "Goku",
+    "game": "anime-expeditions",
+    "tier": "A",
+    "rarity": "Epic",
+    "howToGet": "Dragon Ball karakterleri çekilişinden çıkıyor.",
+    "element": "Güç",
+    "description": "Dragon Ball'un baş karakteri."
+  },
+  {
+    "id": "ae-vegeta",
+    "name": "Vegeta",
+    "game": "anime-expeditions",
+    "tier": "B",
+    "rarity": "Rare",
+    "howToGet": "Dragon Ball çekilişinden çıkıyor, Goku'ya göre daha sık geliyor.",
+    "element": "Güç",
+    "description": "Saiyan prensi."
+  }
+]

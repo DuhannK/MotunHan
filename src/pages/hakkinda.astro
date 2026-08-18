@@ -1,0 +1,152 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+import { href } from '../lib/href';
+import { YOUTUBE, OTHER_CHANNELS } from '../lib/constants';
+import { allVideos } from '../lib/videos';
+
+const games = await getCollection('games', ({ data }) => !data.draft);
+const guides = await getCollection('guides', ({ data }) => !data.draft);
+---
+
+<BaseLayout
+  title="Hakkında"
+  description="MotunHan kim, bu sitede ne var ve neden güvenli? Kanal hakkında bilgi ve diğer kanallar."
+>
+  <div class="wrap-narrow">
+    <header class="page-head reveal">
+      <h1 class="page-title">Merhaba, ben MotunHan! 👋</h1>
+      <p class="page-lead">
+        Roblox oyunlarını Türkçe anlatıyorum. Amacım karmaşık görünen oyunları
+        anlaşılır hâle getirmek — böylece sen de oyuna hazır girebilirsin.
+      </p>
+    </header>
+
+    <div class="prose reveal">
+      <h2>Bu sitede ne var?</h2>
+      <p>
+        Kanalda anlattığım oyunların yazılı rehberleri burada. Video izlemek istemediğinde
+        veya bir şeyi tekrar bakmak istediğinde buraya gelebilirsin.
+      </p>
+      <ul>
+        <li><strong>{games.length} oyun</strong> — her biri için ayrı sayfa ve anlatım</li>
+        <li><strong>{guides.length} rehber</strong> — adım adım, resimli ve videolu</li>
+        <li><strong>{allVideos.length} video</strong> — kanaldan otomatik güncellenen liste</li>
+        <li><strong>Karakter listesi</strong> — kim hangi tier, nasıl alınıyor</li>
+        <li><strong>Kodlar</strong> — bedava ödül kodları</li>
+        <li><strong>Quiz</strong> — öğrendiklerini test et</li>
+      </ul>
+
+      <h2>Ne tür videolar çekiyorum?</h2>
+      <ul>
+        <li>🎯 <strong>Rehber videoları</strong> — bir şeyin nasıl yapıldığını adım adım</li>
+        <li>🏆 <strong>Tier list'ler</strong> — hangi karakter ne kadar güçlü</li>
+        <li>🎲 <strong>Çekiliş videoları</strong> — nadir karakter almaya çalışırken</li>
+        <li>🎉 <strong>Event anlatımları</strong> — yeni etkinliklerde ne yapılır</li>
+        <li>🧠 <strong>Bilinçlendirme</strong> — oyunlar seni nasıl kandırıyor</li>
+      </ul>
+
+      <h2>Bu site güvenli mi?</h2>
+      <p>Evet. Bu site özellikle çocuklar düşünülerek yapıldı:</p>
+      <ul>
+        <li>✅ <strong>Üyelik yok</strong> — hesap açmana gerek yok</li>
+        <li>✅ <strong>Şifre istemiyoruz</strong> — hiçbir zaman istemeyeceğiz</li>
+        <li>✅ <strong>Kişisel bilgi toplamıyoruz</strong> — ad, e-posta, yaş hiçbiri</li>
+        <li>✅ <strong>Reklam yok</strong> — takip eden kodlar yok</li>
+        <li>✅ <strong>Yorum bölümü yok</strong> — kimse sana mesaj atamaz</li>
+        <li>✅ Videolar <strong>gizlilik modunda</strong> gömülüyor</li>
+      </ul>
+
+      <blockquote>
+        <strong>Ailelere not:</strong> Bu sitede kullanıcı hesabı, veri toplama, reklam ağı
+        veya yorum sistemi bulunmuyor. Dış bağlantılar yalnızca YouTube ve Roblox'a gider.
+        Quiz skoru yalnızca çocuğun kendi tarayıcısında saklanır, hiçbir sunucuya gönderilmez.
+      </blockquote>
+
+      <h2>Altın kurallar 🛡️</h2>
+      <p>Roblox oynarken bunları asla unutma:</p>
+      <ol>
+        <li><strong>Şifreni kimseye vermeyin.</strong> Ben bile istemem.</li>
+        <li><strong>"Bedava Robux" diyen herkes dolandırıcıdır.</strong> İstisnası yok.</li>
+        <li><strong>Robux harcamadan önce ailene sor.</strong> O gerçek para.</li>
+        <li><strong>Seni acele ettiren yazılara kanma.</strong> Sakin ol, düşün.</li>
+        <li><strong>Tanımadığın kişiyle kişisel bilgi paylaşma.</strong></li>
+      </ol>
+    </div>
+
+    <!-- Diğer kanallar -->
+    <section class="channels reveal">
+      <h2 class="channels__title">Kanallarım</h2>
+      <div class="channels__grid">
+        <a class="ch card" href={YOUTUBE.channelUrl} target="_blank" rel="noopener noreferrer">
+          <span class="ch__icon" aria-hidden="true">▶</span>
+          <span class="ch__body">
+            <strong class="ch__name">MotunHan - Roblox</strong>
+            <span class="ch__handle">{YOUTUBE.handle}</span>
+            <span class="ch__note">Ana kanal — Roblox rehberleri</span>
+          </span>
+          <span class="ch__go" aria-hidden="true">↗</span>
+        </a>
+
+        {OTHER_CHANNELS.map((c) => (
+          <a class="ch card" href={c.url} target="_blank" rel="noopener noreferrer">
+            <span class="ch__icon" aria-hidden="true">▶</span>
+            <span class="ch__body">
+              <strong class="ch__name">{c.name}</strong>
+              <span class="ch__handle">{c.handle}</span>
+            </span>
+            <span class="ch__go" aria-hidden="true">↗</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <div class="back reveal">
+      <a class="btn btn-ghost" href={href('/oyunlar')}>← Oyunlara göz at</a>
+    </div>
+  </div>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<style>
+  .page-head { margin-bottom: var(--sp-6); }
+  .page-title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+  .page-lead { color: var(--ink-soft); font-size: var(--fs-lg); }
+
+  .channels { margin-top: var(--sp-8); }
+  .channels__title { font-size: var(--fs-xl); margin-bottom: var(--sp-4); }
+  .channels__grid { display: grid; gap: var(--sp-3); }
+
+  .ch {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-4);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .ch__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 46px;
+    height: 46px;
+    background: #ff0033;
+    border-radius: var(--r-md);
+    color: #fff;
+    font-size: 1.1rem;
+  }
+
+  .ch__body { display: grid; gap: 2px; flex: 1; min-width: 0; }
+  .ch__name { color: var(--ink); font-family: var(--font-display); }
+  .ch__handle { color: var(--accent-2); font-size: var(--fs-sm); font-weight: 700; }
+  .ch__note { color: var(--ink-dim); font-size: var(--fs-xs); }
+
+  .ch__go { color: var(--ink-dim); font-size: 1.2rem; }
+  .ch:hover .ch__go { color: var(--accent-2); }
+
+  .back { margin-top: var(--sp-7); }
+</style>

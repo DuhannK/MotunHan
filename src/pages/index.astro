@@ -1,0 +1,198 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import GameCard from '../components/GameCard.astro';
+import VideoCard from '../components/VideoCard.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+import { href } from '../lib/href';
+import { getLatestVideos, getVideosForGame, getVideoById, allVideos } from '../lib/videos';
+
+const games = (await getCollection('games', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const guides = await getCollection('guides', ({ data }) => !data.draft);
+const latestVideos = getLatestVideos(6);
+
+// Her oyun için rehber ve video sayısı — kartlarda gösteriliyor
+const counts = new Map(
+  games.map((g) => [
+    g.id,
+    {
+      guides: guides.filter((gd) => gd.data.game === g.id).length,
+      videos: getVideosForGame(g.data.videoKeywords).length,
+    },
+  ]),
+);
+
+/**
+ * Kanaldaki bilinçlendirme videosu: "Oyunlar Sizi Nasıl Kandırıyor".
+ * Çocuk kitlesi için değerli içerik, ana sayfada ayrı bir bölüm hak ediyor.
+ */
+const awarenessVideo = getVideoById('WZ7vNg2FuiA');
+---
+
+<BaseLayout bleed>
+  <Hero gameCount={games.length} videoCount={allVideos.length} guideCount={guides.length} />
+
+  <!-- ---------- Oyunlar ---------- -->
+  <section class="section wrap" id="oyunlar">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Oyunlar</h2>
+        <p class="section-sub">
+          Her oyun için ayrı rehber, video ve karakter listesi. Hangisini merak ediyorsun?
+        </p>
+      </div>
+      <a class="btn btn-ghost" href={href('/oyunlar')}>Tümünü gör →</a>
+    </div>
+
+    <div class="grid-auto stagger">
+      {games.map((game) => (
+        <div class="reveal">
+          <GameCard
+            game={game}
+            guideCount={counts.get(game.id)?.guides ?? 0}
+            videoCount={counts.get(game.id)?.videos ?? 0}
+          />
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- ---------- Son videolar ---------- -->
+  <section class="section wrap">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Son Videolar</h2>
+        <p class="section-sub">Kanaldan en yeni videolar — otomatik güncellenir.</p>
+      </div>
+      <a class="btn btn-ghost" href={href('/videolar')}>Tüm videolar →</a>
+    </div>
+
+    <div class="grid-auto stagger">
+      {latestVideos.map((video) => (
+        <div class="reveal">
+          <VideoCard video={video} />
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- ---------- Akıllı oyuncu ol ---------- -->
+  {awarenessVideo && (
+    <section class="section">
+      <div class="wrap">
+        <div class="smart reveal">
+          <div class="smart__text">
+            <span class="badge">🧠 Bunu mutlaka izle</span>
+            <h2 class="smart__title">Akıllı oyuncu ol!</h2>
+            <p class="smart__lead">
+              Bazı oyunlar seni acele ettirip düşünmeden para harcatmaya çalışır.
+              “Son 5 dakika!”, “Sadece bugün!” gibi yazılar tam olarak bunun için vardır.
+            </p>
+            <ul class="smart__list">
+              <li>⏰ Acele ettiren yazılara kanma, sakin ol</li>
+              <li>👨‍👩‍👧 Robux harcamadan önce ailene sor</li>
+              <li>🔒 Şifreni <strong>asla</strong> kimseye vermeyin</li>
+              <li>🚫 “Bedava Robux” diyen herkes dolandırıcıdır</li>
+            </ul>
+            <a class="btn" href={href('/quiz')}>Quiz ile kendini test et →</a>
+          </div>
+          <div class="smart__video">
+            <VideoCard video={awarenessVideo} headingLevel={3} />
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ---------- Kısayollar ---------- -->
+  <section class="section wrap">
+    <div class="tiles stagger">
+      <a class="tile card reveal" href={href('/karakterler')}>
+        <span class="tile__icon" aria-hidden="true">🦸</span>
+        <h2 class="tile__title">Karakterler</h2>
+        <p class="tile__text">Hangi karakter kaç tier? Nasıl alınır? Ara ve filtrele.</p>
+        <span class="tile__go" aria-hidden="true">Keşfet →</span>
+      </a>
+
+      <a class="tile card reveal" href={href('/kodlar')}>
+        <span class="tile__icon" aria-hidden="true">🎁</span>
+        <h2 class="tile__title">Bedava Kodlar</h2>
+        <p class="tile__text">Çalışan promo kodları tek tıkla kopyala, ödülünü al.</p>
+        <span class="tile__go" aria-hidden="true">Kodlara git →</span>
+      </a>
+
+      <a class="tile card reveal" href={href('/quiz')}>
+        <span class="tile__icon" aria-hidden="true">🎯</span>
+        <h2 class="tile__title">Quiz</h2>
+        <p class="tile__text">Oyunları ne kadar iyi biliyorsun? Puanını topla!</p>
+        <span class="tile__go" aria-hidden="true">Quize başla →</span>
+      </a>
+    </div>
+  </section>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<style>
+  /* ---- Akıllı oyuncu bölümü ---- */
+  .smart {
+    display: grid;
+    gap: var(--sp-6);
+    align-items: center;
+    padding: var(--sp-6);
+    background: linear-gradient(135deg, var(--bg-2), var(--bg-3));
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-xl);
+  }
+
+  @media (min-width: 900px) {
+    .smart { grid-template-columns: 1fr 1fr; padding: var(--sp-7); }
+  }
+
+  .smart__title { font-size: var(--fs-2xl); margin-block: var(--sp-3) var(--sp-3); }
+  .smart__lead { color: var(--ink-soft); font-size: var(--fs-lg); }
+
+  .smart__list {
+    list-style: none;
+    padding: 0;
+    margin-block: var(--sp-4) var(--sp-5);
+    display: grid;
+    gap: var(--sp-2);
+  }
+
+  .smart__list li { color: var(--ink-soft); }
+  .smart__list strong { color: var(--ink); }
+
+  /* ---- Kısayol kutuları ---- */
+  .tiles {
+    display: grid;
+    gap: var(--sp-5);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-6);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .tile__icon { font-size: 2.6rem; line-height: 1; }
+  .tile__title { font-size: var(--fs-xl); }
+  .tile__text { color: var(--ink-soft); font-size: var(--fs-sm); flex: 1; }
+
+  .tile__go {
+    margin-top: var(--sp-2);
+    color: var(--accent-2);
+    font-family: var(--font-display);
+    font-weight: 600;
+    transition: transform var(--t-mid) var(--ease-out);
+  }
+
+  .tile:hover .tile__go { transform: translateX(6px); }
+</style>

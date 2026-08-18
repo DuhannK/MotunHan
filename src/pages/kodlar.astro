@@ -1,0 +1,170 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CodeCard from '../components/CodeCard.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+import { href } from '../lib/href';
+
+const games = (await getCollection('games', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const gameTitles = new Map(games.map((g) => [g.id, g.data.title]));
+
+const codes = await getCollection('codes');
+const active = codes.filter((c) => c.data.status === 'active');
+const expired = codes.filter((c) => c.data.status === 'expired');
+
+/** Kodları oyuna göre grupla — oyun sırası korunur. */
+function groupByGame(list: typeof codes) {
+  return games
+    .map((g) => ({ game: g, items: list.filter((c) => c.data.game === g.id) }))
+    .filter((group) => group.items.length > 0);
+}
+
+const activeGroups = groupByGame(active);
+---
+
+<BaseLayout
+  title="Bedava Kodlar"
+  description="Roblox oyunlarının bedava ödül kodları. Çalışan kodları tek tıkla kopyala, oyuna gir ve ödülünü al."
+>
+  <div class="wrap">
+    <header class="page-head reveal">
+      <h1 class="page-title">Bedava Kodlar 🎁</h1>
+      <p class="page-lead">
+        Oyunlardaki bedava ödül kodları. Kodun üstündeki <strong>Kopyala</strong> butonuna
+        bas, oyuna gir ve kod kutusuna yapıştır!
+      </p>
+    </header>
+
+    <!-- Kodların çalışmama ihtimali baştan söylensin -->
+    <div class="notice reveal">
+      <span class="notice__icon" aria-hidden="true">💡</span>
+      <div>
+        <strong>Kodlar hakkında bilmen gerekenler</strong>
+        <ul>
+          <li>Kodların <strong>süresi dolabiliyor</strong> — bugün çalışan yarın çalışmayabilir.</li>
+          <li>Kodu <strong>büyük/küçük harfe dikkat ederek</strong> yapıştır.</li>
+          <li>Çalışmazsa üzülme, yeni kod çıkınca buraya ekliyoruz.</li>
+          <li>Kod girmek için <strong>hiçbir zaman şifreni isteyen</strong> bir yere girme!</li>
+        </ul>
+      </div>
+    </div>
+
+    {activeGroups.length > 0 ? (
+      activeGroups.map((group) => (
+        <section class="section-tight">
+          <div class="section-head">
+            <h2 class="section-title">{group.game.data.title}</h2>
+            <a class="btn btn-ghost" href={href(`/oyunlar/${group.game.id}`)}>Oyun sayfası →</a>
+          </div>
+          <div class="grid-auto stagger">
+            {group.items.map((c) => (
+              <div class="reveal">
+                <CodeCard entry={c} />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))
+    ) : (
+      <div class="none reveal" data-anim="zoom">
+        <span class="none__icon anim-float" aria-hidden="true">📭</span>
+        <h2 class="none__title">Şu an aktif kod yok</h2>
+        <p class="none__text">
+          Yeni kod çıkar çıkmaz buraya ekleyeceğim. Kaçırmamak için kanala abone ol —
+          yeni kodları videolarda da duyuruyorum!
+        </p>
+        <a class="btn btn-lg" href={href('/oyunlar')}>Bu arada oyunlara göz at →</a>
+      </div>
+    )}
+
+    {expired.length > 0 && (
+      <section class="section-tight">
+        <details class="old">
+          <summary class="old__toggle">
+            ⌛ Süresi dolmuş kodlar ({expired.length})
+          </summary>
+          <p class="old__note">
+            Bu kodlar artık çalışmıyor, arşiv olarak duruyor.
+          </p>
+          <div class="grid-auto">
+            {expired.map((c) => (
+              <CodeCard entry={c} gameTitle={gameTitles.get(c.data.game)} />
+            ))}
+          </div>
+        </details>
+      </section>
+    )}
+  </div>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<style>
+  .page-head { max-width: 62ch; margin-bottom: var(--sp-5); }
+  .page-title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+  .page-lead { color: var(--ink-soft); font-size: var(--fs-lg); }
+
+  .notice {
+    display: flex;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+    margin-bottom: var(--sp-7);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-lg);
+  }
+
+  .notice__icon { font-size: 1.8rem; line-height: 1; flex: none; }
+  .notice strong { color: var(--ink); }
+
+  .notice ul {
+    margin: var(--sp-2) 0 0;
+    padding-left: 1.2em;
+    display: grid;
+    gap: var(--sp-1);
+    color: var(--ink-soft);
+    font-size: var(--fs-sm);
+  }
+  .notice li::marker { color: var(--accent); }
+
+  /* ---- Aktif kod yokken ---- */
+  .none {
+    max-width: 58ch;
+    margin-inline: auto;
+    padding: var(--sp-8) var(--sp-5);
+    text-align: center;
+    background: var(--bg-2);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: var(--r-xl);
+  }
+
+  .none__icon { display: block; font-size: 3.4rem; margin-bottom: var(--sp-4); }
+  .none__title { font-size: var(--fs-2xl); margin-bottom: var(--sp-3); }
+  .none__text { color: var(--ink-soft); font-size: var(--fs-lg); margin-bottom: var(--sp-5); }
+
+  /* ---- Eski kodlar ---- */
+  .old {
+    padding: var(--sp-4);
+    background: var(--bg-2);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: var(--r-lg);
+  }
+
+  .old__toggle {
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: var(--fs-lg);
+    font-weight: 600;
+    color: var(--ink-soft);
+    list-style-position: inside;
+  }
+  .old__toggle:hover { color: var(--ink); }
+
+  .old__note {
+    margin-block: var(--sp-3);
+    color: var(--ink-dim);
+    font-size: var(--fs-sm);
+  }
+</style>

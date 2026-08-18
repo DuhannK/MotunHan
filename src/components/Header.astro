@@ -1,0 +1,272 @@
+---
+import { href, isActive } from '../lib/href';
+import { NAV_LINKS, YOUTUBE, SITE } from '../lib/constants';
+
+const path = Astro.url.pathname;
+---
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href={href('/')} aria-label={`${SITE.name} ana sayfa`}>
+      <span class="logo__mark" aria-hidden="true">
+        <span class="logo__cube"></span>
+      </span>
+      <span class="logo__text">Motun<span class="logo__accent">Han</span></span>
+    </a>
+
+    <nav class="nav" aria-label="Ana menü">
+      <ul class="nav__list">
+        {NAV_LINKS.map((link) => (
+          <li>
+            <a
+              href={href(link.path)}
+              class="nav__link"
+              aria-current={isActive(path, link.path) ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <a
+      class="btn btn-yt sub-btn"
+      href={YOUTUBE.subscribeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z" />
+      </svg>
+      <span>Abone Ol</span>
+    </a>
+
+    <button
+      class="burger"
+      type="button"
+      aria-label="Menüyü aç"
+      aria-expanded="false"
+      aria-controls="mobil-menu"
+      data-burger
+    >
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- Mobil menü -->
+  <div class="mobile" id="mobil-menu" data-mobile hidden>
+    <ul class="mobile__list">
+      {NAV_LINKS.map((link) => (
+        <li>
+          <a
+            href={href(link.path)}
+            class="mobile__link"
+            aria-current={isActive(path, link.path) ? 'page' : undefined}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))}
+      <li>
+        <a class="btn btn-yt mobile__sub" href={YOUTUBE.subscribeUrl} target="_blank" rel="noopener noreferrer">
+          ▶ YouTube'da Abone Ol
+        </a>
+      </li>
+    </ul>
+  </div>
+</header>
+
+<script>
+  function initHeader() {
+    const burger = document.querySelector<HTMLButtonElement>('[data-burger]');
+    const menu = document.querySelector<HTMLElement>('[data-mobile]');
+    if (!burger || !menu) return;
+
+    const setOpen = (open: boolean) => {
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Menüyü kapat' : 'Menüyü aç');
+      menu.hidden = !open;
+      document.body.style.overflow = open ? 'hidden' : '';
+    };
+
+    burger.addEventListener('click', () => {
+      setOpen(burger.getAttribute('aria-expanded') !== 'true');
+    });
+
+    // Menüdeki bir linke tıklanınca kapat
+    menu.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+
+    // Escape ile kapat
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) {
+        setOpen(false);
+        burger.focus();
+      }
+    });
+
+    // Sayfa geçişinde body kilidi kalmasın
+    document.addEventListener('astro:before-swap', () => { document.body.style.overflow = ''; }, { once: true });
+  }
+
+  document.addEventListener('astro:page-load', initHeader);
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-glass);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    min-height: var(--header-h);
+  }
+
+  /* ---- Logo ---- */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    margin-right: auto;
+  }
+
+  .logo__mark {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--r-md);
+    background: linear-gradient(135deg, var(--accent), var(--accent-3));
+    box-shadow: var(--glow);
+    transition: transform var(--t-mid) var(--ease-bounce);
+  }
+
+  .logo__cube {
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: inset 0 -4px 0 rgb(0 0 0 / 0.18);
+  }
+
+  .logo:hover .logo__mark { transform: rotate(-14deg) scale(1.1); }
+  .logo__accent { color: var(--accent-2); }
+
+  /* ---- Masaüstü menü ---- */
+  .nav__list {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .nav__link {
+    position: relative;
+    display: block;
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--r-md);
+    color: var(--ink-soft);
+    font-weight: 700;
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--t-fast), background var(--t-fast);
+  }
+
+  .nav__link:hover { color: var(--ink); background: rgb(255 255 255 / 0.06); }
+  .nav__link[aria-current='page'] { color: var(--ink); }
+
+  /* Aktif sayfanın altında parlayan çizgi */
+  .nav__link[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    left: var(--sp-3);
+    right: var(--sp-3);
+    bottom: 2px;
+    height: 3px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    box-shadow: var(--glow);
+  }
+
+  .sub-btn { padding: var(--sp-2) var(--sp-4); min-height: 42px; font-size: var(--fs-sm); }
+
+  /* ---- Hamburger ---- */
+  .burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 46px;
+    height: 46px;
+    padding: 0 11px;
+    background: transparent;
+    border: 1px solid rgb(255 255 255 / 0.16);
+    border-radius: var(--r-md);
+    cursor: pointer;
+  }
+
+  .burger span {
+    height: 2.5px;
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    transition: transform var(--t-mid) var(--ease-out), opacity var(--t-fast);
+  }
+
+  .burger[aria-expanded='true'] span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+  .burger[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+  .burger[aria-expanded='true'] span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+
+  /* ---- Mobil menü ---- */
+  .mobile {
+    border-top: 1px solid rgb(255 255 255 / 0.08);
+    background: var(--bg-2);
+    padding: var(--sp-4);
+  }
+
+  .mobile__list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-2); }
+
+  .mobile__link {
+    display: block;
+    padding: var(--sp-4);
+    border-radius: var(--r-md);
+    background: var(--bg-3);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-lg);
+    text-decoration: none;
+  }
+
+  .mobile__link[aria-current='page'] {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 2px var(--accent-line);
+  }
+
+  .mobile__sub { width: 100%; margin-top: var(--sp-2); }
+
+  /* ---- Kırılma noktası ---- */
+  @media (max-width: 980px) {
+    .nav, .sub-btn { display: none; }
+    .burger { display: flex; }
+  }
+  @media (min-width: 981px) {
+    .mobile { display: none; }
+  }
+</style>

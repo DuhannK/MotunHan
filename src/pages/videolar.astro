@@ -1,0 +1,168 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import VideoCard from '../components/VideoCard.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+import { allVideos, matchesKeywords } from '../lib/videos';
+import { YOUTUBE } from '../lib/constants';
+
+const games = (await getCollection('games', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+/**
+ * Her videoyu bir oyuna etiketle. Eşleşmeyen videolar (ör. genel bilinçlendirme
+ * içerikleri) "diger" grubuna düşüyor — kaybolmasınlar.
+ */
+const tagged = allVideos.map((video) => {
+  const match = games.find((g) => matchesKeywords(video, g.data.videoKeywords));
+  return { video, gameSlug: match?.id ?? 'diger' };
+});
+
+const gamesWithVideos = games.filter((g) => tagged.some((t) => t.gameSlug === g.id));
+const hasOther = tagged.some((t) => t.gameSlug === 'diger');
+---
+
+<BaseLayout
+  title="Videolar"
+  description="MotunHan kanalındaki tüm Roblox videoları. Oyuna göre filtrele, izlemek istediğini bul."
+>
+  <div class="wrap">
+    <header class="page-head reveal">
+      <h1 class="page-title">Videolar</h1>
+      <p class="page-lead">
+        Kanaldaki son {allVideos.length} video. Liste her gün otomatik güncelleniyor —
+        daha fazlası için kanala göz at.
+      </p>
+      <a class="btn btn-yt" href={YOUTUBE.channelUrl} target="_blank" rel="noopener noreferrer">
+        ▶ Kanaldaki tüm videolar
+      </a>
+    </header>
+
+    <div class="vfilters reveal" data-vfilters>
+      <fieldset class="chips">
+        <legend class="chips__label">Oyun</legend>
+        <button class="chip is-on" type="button" data-game="all">Tümü</button>
+        {gamesWithVideos.map((g) => (
+          <button class="chip" type="button" data-game={g.id}>{g.data.title}</button>
+        ))}
+        {hasOther && <button class="chip" type="button" data-game="diger">Diğer</button>}
+      </fieldset>
+      <p class="vfilters__count" data-vcount aria-live="polite">{allVideos.length} video</p>
+    </div>
+
+    <div class="grid-auto stagger" data-vresults>
+      {tagged.map(({ video, gameSlug }) => (
+        <div class="reveal" data-vwrap data-game={gameSlug}>
+          <VideoCard video={video} headingLevel={2} />
+        </div>
+      ))}
+    </div>
+
+    <p class="vempty" data-vempty hidden>😕 Bu oyuna ait video bulunamadı.</p>
+  </div>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<script>
+  function initVideoFilter() {
+    const panel = document.querySelector<HTMLElement>('[data-vfilters]');
+    const results = document.querySelector<HTMLElement>('[data-vresults]');
+    if (!panel || !results) return;
+
+    const countEl = panel.querySelector<HTMLElement>('[data-vcount]')!;
+    const emptyEl = document.querySelector<HTMLElement>('[data-vempty]')!;
+    const wraps = Array.from(results.querySelectorAll<HTMLElement>('[data-vwrap]'));
+
+    panel.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.chip');
+      if (!btn) return;
+
+      const value = btn.dataset.game!;
+      panel.querySelectorAll('.chip').forEach((c) => c.classList.toggle('is-on', c === btn));
+
+      let shown = 0;
+      for (const wrap of wraps) {
+        const visible = value === 'all' || wrap.dataset.game === value;
+        wrap.hidden = !visible;
+        if (visible) shown++;
+      }
+
+      countEl.textContent = `${shown} video`;
+      emptyEl.hidden = shown > 0;
+    });
+  }
+
+  document.addEventListener('astro:page-load', initVideoFilter);
+</script>
+
+<style>
+  .page-head { max-width: 62ch; margin-bottom: var(--sp-6); }
+  .page-title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+  .page-lead { color: var(--ink-soft); font-size: var(--fs-lg); margin-bottom: var(--sp-4); }
+
+  .vfilters {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-6);
+    background: var(--bg-2);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: var(--r-lg);
+  }
+
+  .chips {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .chips__label {
+    padding: 0;
+    margin-right: var(--sp-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .chip {
+    padding: var(--sp-2) var(--sp-4);
+    min-height: 40px;
+    background: var(--bg-3);
+    border: 2px solid transparent;
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition: all var(--t-fast);
+  }
+  .chip:hover { color: var(--ink); border-color: var(--accent-line); }
+  .chip.is-on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+    box-shadow: var(--glow);
+  }
+
+  .vfilters__count { color: var(--ink-dim); font-size: var(--fs-sm); font-weight: 700; }
+
+  .vempty {
+    padding: var(--sp-8) var(--sp-4);
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+  }
+</style>

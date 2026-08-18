@@ -1,0 +1,167 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE, YOUTUBE } from '../lib/constants';
+import { asset } from '../lib/href';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Sayfaya özel vurgu rengi (oyun sayfaları kendi rengini geçirir). */
+  accent?: string;
+  /** Sosyal medya önizleme görseli — mutlak URL veya site içi yol. */
+  ogImage?: string;
+  /** Ana sayfa hero'su tam genişlik olsun diye üst boşluğu kapatır. */
+  bleed?: boolean;
+}
+
+const {
+  title,
+  description = SITE.description,
+  accent,
+  ogImage,
+  bleed = false,
+} = Astro.props;
+
+const pageTitle = title ? `${title} — ${SITE.name}` : SITE.title;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImageUrl = ogImage
+  ? (ogImage.startsWith('http') ? ogImage : new URL(asset(ogImage), Astro.site).href)
+  : new URL(asset('/og-default.png'), Astro.site).href;
+
+// Site geneli yapısal veri — arama sonuçlarında zengin görünüm için
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  url: Astro.site?.href,
+  description: SITE.description,
+  inLanguage: 'tr-TR',
+  author: {
+    '@type': 'Person',
+    name: SITE.author,
+    url: YOUTUBE.channelUrl,
+  },
+};
+---
+
+<!doctype html>
+<html lang="tr" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="icon" type="image/svg+xml" href={asset('/favicon.svg')} />
+    <meta name="theme-color" content="#0b0a1a" />
+
+    <!-- Açık grafik / sosyal paylaşım -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:locale" content="tr_TR" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fontlar: ikisi de latin-ext içeriyor -> Türkçe ı İ ğ ş ç ö ü sorunsuz -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap"
+    />
+
+    <!-- Video thumbnail'leri buradan geliyor, bağlantıyı erkenden aç -->
+    <link rel="preconnect" href="https://i.ytimg.com" />
+
+    <!-- Sayfalar arası yumuşak geçiş. prefers-reduced-motion'ı kendi yönetir. -->
+    <ClientRouter />
+
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+    {accent && <style set:html={`:root{--accent:${accent};}`} />}
+
+    <!-- Sayfaya özel <head> içeriği (ör. rehber sayfasının VideoObject verisi) -->
+    <slot name="head" />
+
+    <!-- JS varsa .no-js sınıfını hemen kaldır (reveal içeriği gizli kalmasın) -->
+    <script is:inline>
+      document.documentElement.classList.remove('no-js');
+
+      /**
+       * Thumbnail yedeği: YouTube her videoya `maxresdefault` üretmez
+       * (özellikle düşük çözünürlükte yüklenenlere). Yüklenemezse
+       * her videoda garanti bulunan `hqdefault`a düşüyoruz.
+       * error olayı bubble etmez, o yüzden capture fazında dinliyoruz.
+       */
+      document.addEventListener(
+        'error',
+        function (event) {
+          var el = event.target;
+          if (!el || el.tagName !== 'IMG') return;
+          if (el.dataset.ytFallback === 'done') return;
+          if (el.src.indexOf('maxresdefault') === -1) return;
+          el.dataset.ytFallback = 'done';
+          el.src = el.src.replace('maxresdefault', 'hqdefault');
+        },
+        true,
+      );
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#icerik">İçeriğe atla</a>
+    <Header />
+    <main id="icerik" class={bleed ? '' : 'page-top'}>
+      <slot />
+    </main>
+    <Footer />
+
+    <!--
+      Scroll reveal — temel katman.
+      Tarayıcı CSS scroll-driven animation destekliyorsa animations.css zaten
+      devralıyor; o durumda bu observer sadece sınıfı ekler, zararsız kalır.
+    -->
+    <script>
+      function initReveal() {
+        const items = document.querySelectorAll<HTMLElement>('.reveal:not(.is-visible)');
+        if (items.length === 0) return;
+
+        // Hareketi azalt tercihi varsa hepsini anında göster
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          items.forEach((el) => el.classList.add('is-visible'));
+          return;
+        }
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add('is-visible');
+              io.unobserve(entry.target); // bir kere göster, tekrar tetikleme
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
+        );
+
+        items.forEach((el) => io.observe(el));
+      }
+
+      // astro:page-load hem ilk yüklemede hem her sayfa geçişinde çalışır
+      document.addEventListener('astro:page-load', initReveal);
+    </script>
+
+    <style is:global>
+      .page-top { padding-top: var(--sp-6); }
+
+      /* Sayfa geçiş animasyonu */
+      @view-transition { navigation: auto; }
+    </style>
+  </body>
+</html>

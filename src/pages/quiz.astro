@@ -1,0 +1,516 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+import { href } from '../lib/href';
+
+const quiz = await getCollection('quiz');
+
+// Soruları istemciye JSON olarak geçiyoruz — motor tamamen tarayıcıda çalışıyor,
+// sunucuya hiçbir şey gitmiyor (çocuk gizliliği).
+const questions = quiz.map((q) => ({
+  id: q.id,
+  question: q.data.question,
+  options: q.data.options,
+  correctIndex: q.data.correctIndex,
+  explanation: q.data.explanation,
+  difficulty: q.data.difficulty,
+}));
+---
+
+<BaseLayout
+  title="Quiz"
+  description="Roblox oyunlarını ne kadar iyi biliyorsun? Eğlenceli quiz ile kendini test et, puanını topla ve rozet kazan."
+>
+  <div class="wrap-narrow">
+    <header class="page-head reveal">
+      <h1 class="page-title">Quiz 🎯</h1>
+      <p class="page-lead">
+        Oyunları ne kadar iyi biliyorsun? {questions.length} soru, hepsi Türkçe.
+        Hazırsan başlayalım!
+      </p>
+    </header>
+
+    <!-- Soru verisi -->
+    <script is:inline type="application/json" data-quiz-data set:html={JSON.stringify(questions)} />
+
+    <div class="quiz card" data-quiz>
+      <!-- ---------- Başlangıç ekranı ---------- -->
+      <section class="q-start" data-screen="start">
+        <span class="q-start__icon anim-float" aria-hidden="true">🎮</span>
+        <h2 class="q-start__title">Hazır mısın?</h2>
+        <p class="q-start__text">
+          {questions.length} soru soracağım. Her soruda tek bir doğru cevap var.
+          Yanlış yaparsan da doğrusunu açıklayacağım — yani her türlü öğreneceksin!
+        </p>
+        <p class="q-start__best" data-best hidden></p>
+        <button class="btn btn-lg" type="button" data-start>Quize Başla →</button>
+      </section>
+
+      <!-- ---------- Soru ekranı ---------- -->
+      <section class="q-play" data-screen="play" hidden>
+        <div class="q-bar">
+          <div class="q-bar__fill" data-progress style="width:0%"></div>
+        </div>
+
+        <div class="q-meta">
+          <span data-counter>Soru 1 / {questions.length}</span>
+          <span class="q-score" data-score>0 puan</span>
+        </div>
+
+        <h2 class="q-question" data-question>—</h2>
+
+        <div class="q-options" data-options role="group" aria-label="Cevap seçenekleri"></div>
+
+        <div class="q-feedback" data-feedback hidden aria-live="polite">
+          <p class="q-feedback__head" data-feedback-head></p>
+          <p class="q-feedback__text" data-feedback-text></p>
+        </div>
+
+        <button class="btn btn-lg q-next" type="button" data-next hidden>Sıradaki Soru →</button>
+      </section>
+
+      <!-- ---------- Sonuç ekranı ---------- -->
+      <section class="q-end" data-screen="end" hidden>
+        <span class="q-end__badge" data-badge aria-hidden="true">🏆</span>
+        <h2 class="q-end__title" data-end-title>Bitti!</h2>
+        <p class="q-end__score" data-end-score>0 / 0</p>
+        <p class="q-end__text" data-end-text></p>
+
+        <div class="q-end__actions">
+          <button class="btn btn-lg" type="button" data-restart>🔄 Tekrar Oyna</button>
+          <a class="btn btn-lg btn-ghost" href={href('/oyunlar')}>Oyunlara Git</a>
+        </div>
+      </section>
+    </div>
+
+    <p class="q-privacy">
+      🔒 Puanın sadece kendi tarayıcında saklanır. Hiçbir bilgi kaydedilmiyor veya
+      gönderilmiyor — üyelik de gerekmiyor.
+    </p>
+  </div>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<script>
+  interface Q {
+    id: string;
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+    difficulty: string;
+  }
+
+  const BEST_KEY = 'motunhan:quiz:best';
+
+  function initQuiz() {
+    const root = document.querySelector<HTMLElement>('[data-quiz]');
+    const dataEl = document.querySelector<HTMLScriptElement>('[data-quiz-data]');
+    if (!root || !dataEl) return;
+
+    const all: Q[] = JSON.parse(dataEl.textContent ?? '[]');
+    if (all.length === 0) return;
+
+    const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+
+    const screens = {
+      start: $('[data-screen="start"]'),
+      play: $('[data-screen="play"]'),
+      end: $('[data-screen="end"]'),
+    };
+
+    const optionsEl = $('[data-options]');
+    const questionEl = $('[data-question]');
+    const counterEl = $('[data-counter]');
+    const scoreEl = $('[data-score]');
+    const progressEl = $('[data-progress]');
+    const feedbackEl = $('[data-feedback]');
+    const fbHead = $('[data-feedback-head]');
+    const fbText = $('[data-feedback-text]');
+    const nextBtn = $<HTMLButtonElement>('[data-next]');
+    const bestEl = $('[data-best]');
+
+    let order: Q[] = [];
+    let index = 0;
+    let score = 0;
+    let locked = false;
+
+    const show = (name: keyof typeof screens) => {
+      for (const [key, el] of Object.entries(screens)) el.hidden = key !== name;
+    };
+
+    /** Fisher-Yates — her oynayışta sorular farklı sırada gelsin. */
+    const shuffle = <T,>(arr: T[]): T[] => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j]!, a[i]!];
+      }
+      return a;
+    };
+
+    function readBest(): number | null {
+      try {
+        const raw = localStorage.getItem(BEST_KEY);
+        if (!raw) return null;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+      } catch {
+        return null; // gizli sekmede localStorage kapalı olabilir
+      }
+    }
+
+    function writeBest(value: number) {
+      try {
+        localStorage.setItem(BEST_KEY, String(value));
+      } catch {
+        /* sessizce geç */
+      }
+    }
+
+    function showBest() {
+      const best = readBest();
+      if (best === null) {
+        bestEl.hidden = true;
+        return;
+      }
+      bestEl.hidden = false;
+      bestEl.textContent = `🏅 En iyi skorun: ${best} / ${all.length}`;
+    }
+
+    function render() {
+      const q = order[index]!;
+      locked = false;
+
+      questionEl.textContent = q.question;
+      counterEl.textContent = `Soru ${index + 1} / ${order.length}`;
+      scoreEl.textContent = `${score} puan`;
+      progressEl.style.width = `${(index / order.length) * 100}%`;
+
+      feedbackEl.hidden = true;
+      nextBtn.hidden = true;
+
+      optionsEl.replaceChildren();
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'q-opt';
+        btn.dataset.index = String(i);
+        btn.innerHTML = `<span class="q-opt__key">${String.fromCharCode(65 + i)}</span><span>${opt}</span>`;
+        optionsEl.appendChild(btn);
+      });
+    }
+
+    function answer(chosen: number) {
+      if (locked) return;
+      locked = true;
+
+      const q = order[index]!;
+      const correct = chosen === q.correctIndex;
+      if (correct) score++;
+
+      // Seçenekleri işaretle
+      optionsEl.querySelectorAll<HTMLButtonElement>('.q-opt').forEach((btn) => {
+        const i = Number(btn.dataset.index);
+        btn.disabled = true;
+        if (i === q.correctIndex) btn.classList.add('is-correct');
+        else if (i === chosen) btn.classList.add('is-wrong');
+      });
+
+      scoreEl.textContent = `${score} puan`;
+
+      fbHead.textContent = correct ? '✅ Doğru!' : '❌ Yanlış';
+      fbHead.className = `q-feedback__head ${correct ? 'is-ok' : 'is-no'}`;
+      fbText.textContent = q.explanation;
+      feedbackEl.hidden = false;
+
+      if (!correct) {
+        feedbackEl.classList.remove('anim-shake');
+        // reflow tetikle ki animasyon her seferinde baştan oynasın
+        void feedbackEl.offsetWidth;
+        feedbackEl.classList.add('anim-shake');
+      }
+
+      nextBtn.hidden = false;
+      nextBtn.textContent = index + 1 >= order.length ? 'Sonucu Gör →' : 'Sıradaki Soru →';
+      nextBtn.focus();
+    }
+
+    function finish() {
+      const total = order.length;
+      const pct = Math.round((score / total) * 100);
+
+      const tiers: Array<[number, string, string, string]> = [
+        [100, '🏆', 'Efsane!', 'Tam puan! Sen bu oyunları benden iyi biliyorsun. 👑'],
+        [80, '🥇', 'Uzman!', 'Harika skor! Neredeyse her şeyi biliyorsun.'],
+        [60, '🥈', 'İyi iş!', 'Güzel skor. Birkaç rehber okursan uzman olursun.'],
+        [40, '🥉', 'Fena değil!', 'İyi başlangıç. Rehberlere göz atıp tekrar dene!'],
+        [0, '📚', 'Biraz daha çalış', 'Sorun değil! Rehberleri okuyup videoları izle, sonra tekrar gel.'],
+      ];
+
+      const [, badge, title, text] = tiers.find(([min]) => pct >= min)!;
+
+      $('[data-badge]').textContent = badge;
+      $('[data-end-title]').textContent = title;
+      $('[data-end-score]').textContent = `${score} / ${total}`;
+      $('[data-end-text]').textContent = text;
+
+      const best = readBest();
+      if (best === null || score > best) writeBest(score);
+
+      show('end');
+      if (pct >= 60) confetti();
+    }
+
+    /** Basit konfeti — kütüphane yok, sadece DOM + CSS animasyonu. */
+    function confetti() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      const colors = ['#a855f7', '#22d3ee', '#f472b6', '#fbbf24', '#34d399'];
+      const layer = document.createElement('div');
+      layer.className = 'confetti-layer';
+      layer.setAttribute('aria-hidden', 'true');
+
+      for (let i = 0; i < 70; i++) {
+        const bit = document.createElement('span');
+        bit.className = 'confetti-bit';
+        bit.style.left = `${Math.random() * 100}%`;
+        bit.style.background = colors[i % colors.length]!;
+        bit.style.animationDelay = `${Math.random() * 0.7}s`;
+        bit.style.animationDuration = `${2.4 + Math.random() * 1.6}s`;
+        bit.style.width = bit.style.height = `${7 + Math.random() * 8}px`;
+        if (Math.random() > 0.5) bit.style.borderRadius = '50%';
+        layer.appendChild(bit);
+      }
+
+      document.body.appendChild(layer);
+      window.setTimeout(() => layer.remove(), 4600);
+    }
+
+    function start() {
+      order = shuffle(all);
+      index = 0;
+      score = 0;
+      show('play');
+      render();
+    }
+
+    // ---- Olaylar ----
+    $('[data-start]').addEventListener('click', start);
+    $('[data-restart]').addEventListener('click', start);
+
+    optionsEl.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.q-opt');
+      if (btn) answer(Number(btn.dataset.index));
+    });
+
+    nextBtn.addEventListener('click', () => {
+      index++;
+      if (index >= order.length) finish();
+      else render();
+    });
+
+    showBest();
+    show('start');
+  }
+
+  document.addEventListener('astro:page-load', initQuiz);
+</script>
+
+<style>
+  .page-head { margin-bottom: var(--sp-6); }
+  .page-title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+  .page-lead { color: var(--ink-soft); font-size: var(--fs-lg); }
+
+  .quiz { padding: var(--sp-6) var(--sp-5); }
+
+  /* ---------- Başlangıç ---------- */
+  .q-start { text-align: center; }
+  .q-start__icon { display: block; font-size: 3.4rem; margin-bottom: var(--sp-4); }
+  .q-start__title { font-size: var(--fs-2xl); margin-bottom: var(--sp-3); }
+  .q-start__text {
+    max-width: 48ch;
+    margin: 0 auto var(--sp-5);
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+  }
+  .q-start__best {
+    margin-bottom: var(--sp-4);
+    color: var(--accent-2);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  /* ---------- İlerleme ---------- */
+  .q-bar {
+    height: 10px;
+    background: var(--bg-3);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+    margin-bottom: var(--sp-4);
+  }
+
+  .q-bar__fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    border-radius: var(--r-pill);
+    transition: width var(--t-slow) var(--ease-out);
+  }
+
+  .q-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+    font-family: var(--font-display);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--ink-dim);
+  }
+
+  .q-score { color: var(--accent-2); }
+
+  .q-question {
+    font-size: var(--fs-xl);
+    margin-bottom: var(--sp-5);
+    line-height: 1.35;
+  }
+
+  /* ---------- Seçenekler ---------- */
+  .q-options { display: grid; gap: var(--sp-3); }
+
+  .q-options :global(.q-opt) {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-4);
+    min-height: 60px;
+    background: var(--bg-3);
+    border: 2px solid transparent;
+    border-radius: var(--r-md);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--fs-base);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease-out);
+  }
+
+  .q-options :global(.q-opt:hover:not(:disabled)) {
+    border-color: var(--accent);
+    transform: translateX(5px);
+  }
+
+  .q-options :global(.q-opt:disabled) { cursor: default; }
+
+  .q-options :global(.q-opt__key) {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    background: var(--accent-soft);
+    border-radius: var(--r-sm);
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent-2);
+  }
+
+  .q-options :global(.q-opt.is-correct) {
+    border-color: var(--ok);
+    background: color-mix(in oklab, var(--ok) 18%, var(--bg-3));
+  }
+  .q-options :global(.q-opt.is-correct .q-opt__key) { background: var(--ok); color: #06281c; }
+
+  .q-options :global(.q-opt.is-wrong) {
+    border-color: var(--bad);
+    background: color-mix(in oklab, var(--bad) 18%, var(--bg-3));
+  }
+  .q-options :global(.q-opt.is-wrong .q-opt__key) { background: var(--bad); color: #2e0710; }
+
+  /* ---------- Geri bildirim ---------- */
+  .q-feedback {
+    margin-top: var(--sp-5);
+    padding: var(--sp-4);
+    background: var(--bg-3);
+    border-radius: var(--r-md);
+    border-left: 5px solid var(--accent);
+  }
+
+  .q-feedback__head {
+    font-family: var(--font-display);
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    margin-bottom: var(--sp-2);
+  }
+  .q-feedback__head.is-ok { color: var(--ok); }
+  .q-feedback__head.is-no { color: var(--bad); }
+
+  .q-feedback__text { color: var(--ink-soft); }
+
+  .q-next { width: 100%; margin-top: var(--sp-5); }
+
+  /* ---------- Sonuç ---------- */
+  .q-end { text-align: center; }
+
+  .q-end__badge {
+    display: block;
+    font-size: 4.4rem;
+    margin-bottom: var(--sp-3);
+    animation: pop 500ms var(--ease-bounce) both;
+  }
+
+  .q-end__title { font-size: var(--fs-2xl); margin-bottom: var(--sp-2); }
+
+  .q-end__score {
+    font-family: var(--font-display);
+    font-size: var(--fs-3xl);
+    font-weight: 700;
+    color: var(--accent-2);
+    margin-bottom: var(--sp-3);
+  }
+
+  .q-end__text {
+    max-width: 46ch;
+    margin: 0 auto var(--sp-6);
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+  }
+
+  .q-end__actions { display: flex; justify-content: center; gap: var(--sp-3); flex-wrap: wrap; }
+
+  .q-privacy {
+    margin-top: var(--sp-5);
+    text-align: center;
+    color: var(--ink-dim);
+    font-size: var(--fs-sm);
+  }
+
+  @media (max-width: 620px) {
+    .q-end__actions .btn { width: 100%; }
+  }
+</style>
+
+<style is:global>
+  /* Konfeti katmanı — JS ile body'ye ekleniyor */
+  .confetti-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .confetti-bit {
+    position: absolute;
+    top: -12vh;
+    border-radius: 3px;
+    animation-name: confetti-fall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+</style>

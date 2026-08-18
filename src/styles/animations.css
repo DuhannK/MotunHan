@@ -1,0 +1,170 @@
+/**
+ * ANİMASYONLAR
+ *
+ * Katmanlı yaklaşım:
+ *  1. Temel: IntersectionObserver (.reveal) — her tarayıcıda çalışır
+ *  2. Yükseltme: destekleyen tarayıcıda CSS scroll-driven animation (JS'siz)
+ *
+ * EN ALTTAKİ prefers-reduced-motion bloğu hepsini kapatır.
+ */
+
+/* ---------- Keyframe'ler ---------- */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-38px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes slide-left {
+  from { opacity: 0; transform: translateX(38px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-22px) rotate(4deg); }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-14px) rotate(-5deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 22px color-mix(in oklab, var(--accent) 35%, transparent); }
+  50%      { box-shadow: 0 0 46px color-mix(in oklab, var(--accent) 70%, transparent); }
+}
+@keyframes gradient-pan {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+@keyframes pop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(-12vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(102vh) rotate(760deg); opacity: 0; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Scroll reveal (temel katman: JS) ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+
+.reveal[data-anim='zoom']  { transform: scale(0.9); }
+.reveal[data-anim='right'] { transform: translateX(-38px); }
+.reveal[data-anim='left']  { transform: translateX(38px); }
+.reveal[data-anim='fade']  { transform: none; }
+.reveal.is-visible[data-anim] { transform: none; }
+
+/* JS çalışmazsa (noscript) içerik gizli kalmasın */
+.no-js .reveal { opacity: 1; transform: none; }
+
+/**
+ * Yükseltme: scroll-driven animation destekleniyorsa JS'i devre dışı bırakıp
+ * animasyonu tamamen tarayıcıya devret — daha akıcı, ana thread'i meşgul etmez.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      animation: fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 8% cover 32%;
+      transition: none;
+    }
+    .reveal[data-anim='zoom']  { animation-name: zoom-in; }
+    .reveal[data-anim='right'] { animation-name: slide-right; }
+    .reveal[data-anim='left']  { animation-name: slide-left; }
+    .reveal[data-anim='fade']  { animation-name: fade-in; }
+  }
+}
+
+/* ---------- Yardımcı animasyon sınıfları ---------- */
+.anim-float      { animation: float 7s ease-in-out infinite; }
+.anim-float-slow { animation: float-slow 11s ease-in-out infinite; }
+.anim-pulse      { animation: pulse-glow 3.4s ease-in-out infinite; }
+.anim-spin-slow  { animation: spin 26s linear infinite; }
+.anim-pop        { animation: pop 420ms var(--ease-bounce) both; }
+.anim-shake      { animation: shake 520ms both; }
+
+/* Akan gradient metin — hero başlığında kullanılıyor */
+.gradient-text {
+  background: linear-gradient(100deg, var(--accent-2), var(--accent-3), var(--accent), var(--accent-2));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-pan 9s ease infinite;
+}
+
+/* Kart hover tilt — 3B derinlik hissi */
+.tilt {
+  transform-style: preserve-3d;
+  transition: transform var(--t-mid) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tilt:hover { transform: perspective(900px) rotateX(4deg) rotateY(-5deg) translateY(-8px) scale(1.02); }
+}
+
+/* Sonsuz akan şerit (kodlar bölümü) */
+.marquee { overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.marquee__track { display: flex; width: max-content; animation: marquee 34s linear infinite; }
+.marquee:hover .marquee__track { animation-play-state: paused; }
+
+/* Sıralı gecikme — grid'lerde kartlar peş peşe belirsin */
+.stagger > *:nth-child(1) { --reveal-delay:  0ms; }
+.stagger > *:nth-child(2) { --reveal-delay:  70ms; }
+.stagger > *:nth-child(3) { --reveal-delay: 140ms; }
+.stagger > *:nth-child(4) { --reveal-delay: 210ms; }
+.stagger > *:nth-child(5) { --reveal-delay: 280ms; }
+.stagger > *:nth-child(6) { --reveal-delay: 350ms; }
+.stagger > *:nth-child(7) { --reveal-delay: 420ms; }
+.stagger > *:nth-child(8) { --reveal-delay: 490ms; }
+
+/* ---------- Sayfa geçişleri (ClientRouter) ---------- */
+@keyframes vt-in  { from { opacity: 0; transform: translateY(16px); } }
+@keyframes vt-out { to   { opacity: 0; transform: translateY(-10px); } }
+
+/**
+ * HAREKETİ AZALT
+ * Astro'nun <ClientRouter /> bileşeni view transition'ları kendi kapatıyor,
+ * ama custom animasyonlarımızı burada elle durduruyoruz.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  .tilt:hover { transform: none !important; }
+  .marquee__track { animation: none !important; }
+}

@@ -1,0 +1,327 @@
+---
+import { href } from '../lib/href';
+import { YOUTUBE } from '../lib/constants';
+
+interface Props {
+  gameCount: number;
+  videoCount: number;
+  guideCount: number;
+}
+
+const { gameCount, videoCount, guideCount } = Astro.props;
+
+const stats = [
+  { value: gameCount, label: 'Oyun', icon: '🎮' },
+  { value: videoCount, label: 'Video', icon: '🎬' },
+  { value: guideCount, label: 'Rehber', icon: '📘' },
+];
+---
+
+<section class="hero">
+  <!-- Süzülen dekoratif şekiller (parallax) -->
+  <div class="hero__deco" aria-hidden="true">
+    <span class="blob blob--1 anim-float"></span>
+    <span class="blob blob--2 anim-float-slow"></span>
+    <span class="blob blob--3 anim-float"></span>
+    <span class="cube cube--1 anim-float-slow"></span>
+    <span class="cube cube--2 anim-float"></span>
+    <span class="cube cube--3 anim-float-slow"></span>
+  </div>
+
+  <div class="wrap hero__inner">
+    <p class="hero__kicker reveal" data-anim="fade">
+      <span class="dot"></span> Türkçe Roblox rehberleri
+    </p>
+
+    <h1 class="hero__title reveal">
+      Roblox'ta <span class="gradient-text">kaybolma</span>,<br />
+      birlikte <span class="gradient-text">öğrenelim!</span>
+    </h1>
+
+    <p class="hero__lead reveal" style="--reveal-delay:110ms">
+      Oyunlar nasıl oynanır, karakterler nasıl alınır, eventlerde ne yapılır?
+      Hepsini adım adım Türkçe anlatıyorum. Videoları izle, rehberleri oku, oyuna hazır gir!
+    </p>
+
+    <div class="hero__cta reveal" style="--reveal-delay:200ms">
+      <a class="btn btn-lg" href={href('/oyunlar')}>🎮 Oyunları Keşfet</a>
+      <a
+        class="btn btn-lg btn-yt"
+        href={YOUTUBE.subscribeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ▶ YouTube'da Abone Ol
+      </a>
+    </div>
+
+    <dl class="hero__stats reveal" style="--reveal-delay:290ms">
+      {stats.map((s) => (
+        <div class="stat">
+          <dt class="stat__label"><span aria-hidden="true">{s.icon}</span> {s.label}</dt>
+          {/* Gerçek değer HTML'de duruyor: JS çalışmazsa doğru sayı görünür.
+              JS varsa sıfırdan başlatıp sayarak bu değere çıkarıyor. */}
+          <dd class="stat__value" data-count={s.value}>{s.value}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+
+  <a class="hero__scroll" href="#oyunlar" aria-label="Aşağı kaydır">
+    <span aria-hidden="true">↓</span>
+  </a>
+</section>
+
+<script>
+  /** Sayılar görünür olunca 0'dan hedefe sayarak artsın. */
+  function initCounters() {
+    const nodes = document.querySelectorAll<HTMLElement>('[data-count]');
+    if (nodes.length === 0) return;
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const run = (el: HTMLElement) => {
+      const target = Number(el.dataset.count ?? 0);
+      if (reduce || target === 0) {
+        el.textContent = String(target);
+        return;
+      }
+
+      // Sayma efekti için başlangıcı sıfırla (HTML'deki gerçek değerin üstüne yazıyoruz)
+      el.textContent = '0';
+
+      const duration = 1100;
+      const start = performance.now();
+
+      const tick = (now: number) => {
+        const p = Math.min((now - start) / duration, 1);
+        // easeOutCubic — sonda yavaşlayarak dursun
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = String(Math.round(target * eased));
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          run(e.target as HTMLElement);
+          io.unobserve(e.target);
+        }
+      },
+      { threshold: 0.4 },
+    );
+
+    nodes.forEach((n) => io.observe(n));
+  }
+
+  document.addEventListener('astro:page-load', initCounters);
+</script>
+
+<style>
+  .hero {
+    position: relative;
+    display: grid;
+    align-items: center;
+    min-height: min(90dvh, 780px);
+    padding-block: var(--sp-9) var(--sp-8);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* Zemin: yumuşak renk sızıntıları */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(60% 55% at 18% 12%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 70%),
+      radial-gradient(55% 50% at 85% 20%, color-mix(in oklab, var(--accent-2) 22%, transparent), transparent 70%),
+      radial-gradient(70% 60% at 50% 100%, color-mix(in oklab, var(--accent-3) 18%, transparent), transparent 70%);
+  }
+
+  /* İnce ızgara dokusu — oyun havası */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+    background-size: 54px 54px;
+    mask-image: radial-gradient(80% 70% at 50% 40%, #000, transparent);
+  }
+
+  .hero__inner {
+    position: relative;
+    text-align: center;
+  }
+
+  .hero__kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    margin-bottom: var(--sp-5);
+    background: var(--bg-glass);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-pill);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 12px var(--ok);
+    animation: pulse-glow 2.2s ease-in-out infinite;
+  }
+
+  .hero__title {
+    font-size: var(--fs-hero);
+    margin-bottom: var(--sp-5);
+  }
+
+  .hero__lead {
+    max-width: 58ch;
+    margin: 0 auto var(--sp-6);
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+  }
+
+  .hero__cta {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--sp-8);
+  }
+
+  /* --- İstatistikler --- */
+  .hero__stats {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+    margin: 0;
+  }
+
+  .stat {
+    min-width: 118px;
+    padding: var(--sp-4) var(--sp-5);
+    background: var(--bg-glass);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: var(--r-lg);
+    backdrop-filter: blur(8px);
+  }
+
+  .stat__value {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-2xl);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent-2);
+  }
+
+  .stat__label {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--ink-dim);
+    margin-bottom: var(--sp-1);
+  }
+
+  /* --- Dekoratif şekiller --- */
+  .hero__deco {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(46px);
+    opacity: 0.5;
+  }
+  .blob--1 { width: 300px; height: 300px; top: 6%; left: -6%; background: var(--accent); }
+  .blob--2 { width: 240px; height: 240px; top: 52%; right: -4%; background: var(--accent-2); }
+  .blob--3 { width: 200px; height: 200px; bottom: 4%; left: 24%; background: var(--accent-3); }
+
+  /* Roblox'u çağrıştıran küpler */
+  .cube {
+    position: absolute;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-3));
+    box-shadow: 0 10px 32px rgb(0 0 0 / 0.35);
+    opacity: 0.75;
+  }
+  .cube--1 { width: 46px; height: 46px; top: 16%; left: 10%; rotate: 14deg; }
+  .cube--2 { width: 30px; height: 30px; top: 68%; left: 7%; rotate: -20deg; }
+  .cube--3 {
+    width: 38px;
+    height: 38px;
+    top: 24%;
+    right: 12%;
+    rotate: 28deg;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  }
+
+  /* Parallax: destekleyen tarayıcıda scroll'a bağlı, JS yok */
+  @supports (animation-timeline: scroll()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .blob,
+      .cube {
+        animation: hero-parallax linear both;
+        animation-timeline: scroll();
+        animation-range: 0 90vh;
+      }
+      .blob--1, .cube--1 { --shift: 130px; }
+      .blob--2, .cube--2 { --shift: 220px; }
+      .blob--3, .cube--3 { --shift: 70px; }
+    }
+  }
+
+  @keyframes hero-parallax {
+    to { transform: translateY(calc(var(--shift, 100px) * -1)); }
+  }
+
+  /* --- Aşağı kaydır oku --- */
+  .hero__scroll {
+    position: absolute;
+    bottom: var(--sp-5);
+    left: 50%;
+    translate: -50% 0;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--accent-line);
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    font-size: 1.2rem;
+    text-decoration: none;
+    animation: float 2.6s ease-in-out infinite;
+  }
+  .hero__scroll:hover {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  @media (max-width: 620px) {
+    .hero {
+      min-height: auto;
+      padding-block: var(--sp-8) var(--sp-7);
+    }
+    .hero__scroll { display: none; }
+    .hero__cta .btn { width: 100%; }
+  }
+</style>

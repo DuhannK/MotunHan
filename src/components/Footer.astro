@@ -1,0 +1,151 @@
+---
+import { href } from '../lib/href';
+import { NAV_LINKS, YOUTUBE, OTHER_CHANNELS, SITE } from '../lib/constants';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="cols">
+      <div class="brand">
+        <a class="brand__logo" href={href('/')}>
+          <span class="brand__mark" aria-hidden="true"></span>
+          Motun<span class="brand__accent">Han</span>
+        </a>
+        <p class="brand__text">
+          Roblox oyunlarını Türkçe anlatan rehberler, eğitim videoları ve bedava kodlar.
+          Yeni videolar için kanala göz at!
+        </p>
+        <a class="btn btn-yt" href={YOUTUBE.subscribeUrl} target="_blank" rel="noopener noreferrer">
+          ▶ Abone Ol
+        </a>
+      </div>
+
+      <nav class="col" aria-label="Alt menü">
+        <h2 class="col__title">Keşfet</h2>
+        <ul class="col__list">
+          {NAV_LINKS.map((link) => (
+            <li><a href={href(link.path)}>{link.label}</a></li>
+          ))}
+          <li><a href={href('/hakkinda')}>Hakkında</a></li>
+        </ul>
+      </nav>
+
+      <div class="col">
+        <h2 class="col__title">Diğer Kanallarım</h2>
+        <ul class="col__list">
+          <li>
+            <a href={YOUTUBE.channelUrl} target="_blank" rel="noopener noreferrer">
+              {YOUTUBE.handle} <span class="ext" aria-hidden="true">↗</span>
+            </a>
+          </li>
+          {OTHER_CHANNELS.map((ch) => (
+            <li>
+              <a href={ch.url} target="_blank" rel="noopener noreferrer">
+                {ch.handle} <span class="ext" aria-hidden="true">↗</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="col">
+        <h2 class="col__title">Güvenli Site</h2>
+        <ul class="col__list col__list--plain">
+          <li>✅ Üyelik yok, şifre yok</li>
+          <li>✅ Kişisel bilgi toplamıyoruz</li>
+          <li>✅ Reklam ve takip yok</li>
+          <li>✅ Yorum bölümü yok</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="legal">
+      <p>
+        © {year} {SITE.name}. Sevgiyle yapıldı 💜
+      </p>
+      <p class="disclaimer">
+        Bu bir hayran sitesidir. Roblox Corporation ile resmi bir bağlantısı yoktur.
+        “Roblox” ve oyun isimleri ilgili sahiplerine aittir.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: var(--sp-9);
+    padding-block: var(--sp-8) var(--sp-6);
+    background: var(--bg-2);
+    border-top: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  .cols {
+    display: grid;
+    gap: var(--sp-6);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  }
+
+  .brand { grid-column: span 1; }
+  @media (min-width: 760px) { .brand { max-width: 34ch; } }
+
+  .brand__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .brand__mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  }
+
+  .brand__accent { color: var(--accent-2); }
+
+  .brand__text {
+    margin-block: var(--sp-3) var(--sp-4);
+    color: var(--ink-soft);
+    font-size: var(--fs-sm);
+  }
+
+  .col__title {
+    font-size: var(--fs-base);
+    font-family: var(--font-display);
+    color: var(--ink);
+    margin-bottom: var(--sp-3);
+  }
+
+  .col__list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-2); }
+
+  .col__list a {
+    color: var(--ink-soft);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    transition: color var(--t-fast);
+  }
+  .col__list a:hover { color: var(--accent-2); }
+
+  .col__list--plain li { color: var(--ink-soft); font-size: var(--fs-sm); }
+
+  .ext { font-size: 0.8em; opacity: 0.6; }
+
+  .legal {
+    margin-top: var(--sp-7);
+    padding-top: var(--sp-5);
+    border-top: 1px solid rgb(255 255 255 / 0.08);
+    display: grid;
+    gap: var(--sp-2);
+    text-align: center;
+  }
+
+  .legal p { color: var(--ink-dim); font-size: var(--fs-sm); }
+  .disclaimer { font-size: var(--fs-xs); max-width: 62ch; margin-inline: auto; }
+</style>

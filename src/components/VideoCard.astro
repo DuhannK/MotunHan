@@ -1,0 +1,187 @@
+---
+import { formatViews, timeAgo, thumbnailUrl, embedUrl, watchUrl, type Video } from '../lib/videos';
+
+interface Props {
+  video: Video;
+  /** Öne çıkan videolar daha büyük gösterilir. */
+  featured?: boolean;
+  /** Kart başlığı için doğru başlık seviyesi (SEO/erişilebilirlik). */
+  headingLevel?: 2 | 3 | 4;
+}
+
+const { video, featured = false, headingLevel = 3 } = Astro.props;
+const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4';
+
+// GİZLİLİK: bu URL sadece data-attribute olarak duruyor.
+// Kullanıcı oynat'a basana kadar YouTube'a HİÇBİR istek gitmiyor.
+const embed = embedUrl(video.id);
+---
+
+<article class={`vcard card ${featured ? 'vcard--featured' : ''}`}>
+  <div class="vcard__frame" data-video-frame data-embed={embed} data-title={video.title}>
+    <button class="vcard__play" type="button" data-play aria-label={`Videoyu oynat: ${video.title}`}>
+      <img
+        class="vcard__thumb"
+        src={thumbnailUrl(video.id, featured ? 'maxres' : 'hq')}
+        alt=""
+        width={featured ? 1280 : 480}
+        height={featured ? 720 : 360}
+        loading={featured ? 'eager' : 'lazy'}
+        decoding="async"
+      />
+      <span class="vcard__scrim"></span>
+      <span class="vcard__btn" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+      </span>
+    </button>
+  </div>
+
+  <div class="vcard__body">
+    <Heading class="vcard__title">
+      <a href={watchUrl(video.id)} target="_blank" rel="noopener noreferrer">{video.title}</a>
+    </Heading>
+    <p class="vcard__meta">
+      <span>👁 {formatViews(video.views)} izlenme</span>
+      <span aria-hidden="true">•</span>
+      <time datetime={video.published}>{timeAgo(video.published)}</time>
+    </p>
+  </div>
+</article>
+
+<script>
+  /**
+   * FACADE DESENİ
+   * Sayfa yüklenirken sadece thumbnail (~30KB) iniyor. Kullanıcı oynat'a
+   * bastığında iframe enjekte ediliyor. Böylece 10 videolu bir sayfa
+   * 10MB yerine ~300KB açılıyor ve tıklanmayan videolar için YouTube'a
+   * hiçbir istek gitmiyor.
+   *
+   * Delegasyon document üzerinde: ClientRouter sayfa geçişlerinde
+   * document'i korur, o yüzden bir kez bağlamak yeterli.
+   */
+  const FLAG = '__motunhanVideoFacade';
+
+  if (!(FLAG in window)) {
+    (window as any)[FLAG] = true;
+
+    document.addEventListener('click', (event) => {
+      const btn = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-play]');
+      if (!btn) return;
+
+      const frame = btn.closest<HTMLElement>('[data-video-frame]');
+      const embed = frame?.dataset.embed;
+      if (!frame || !embed) return;
+
+      const iframe = document.createElement('iframe');
+      iframe.src = embed;
+      iframe.title = frame.dataset.title ?? 'YouTube videosu';
+      iframe.loading = 'lazy';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.allowFullscreen = true;
+      iframe.className = 'vcard__iframe';
+
+      frame.replaceChildren(iframe);
+      iframe.focus();
+    });
+  }
+</script>
+
+<style>
+  .vcard { display: flex; flex-direction: column; height: 100%; }
+
+  .vcard__frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--bg-3);
+    overflow: hidden;
+  }
+
+  .vcard__play {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
+  .vcard__thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--t-slow) var(--ease-out), filter var(--t-mid);
+  }
+
+  .vcard__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgb(6 4 20 / 0.55));
+    opacity: 0;
+    transition: opacity var(--t-mid);
+  }
+
+  /* Oynat butonu */
+  .vcard__btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    display: grid;
+    place-items: center;
+    width: 62px;
+    height: 62px;
+    border-radius: var(--r-pill);
+    background: #ff0033;
+    color: #fff;
+    box-shadow: 0 6px 22px rgb(0 0 0 / 0.45);
+    transition: transform var(--t-mid) var(--ease-bounce), background var(--t-mid);
+  }
+
+  .vcard__btn svg { width: 30px; height: 30px; margin-left: 3px; }
+
+  .vcard__play:hover .vcard__thumb { transform: scale(1.06); }
+  .vcard__play:hover .vcard__scrim { opacity: 1; }
+  .vcard__play:hover .vcard__btn { transform: translate(-50%, -50%) scale(1.16); }
+  .vcard__play:focus-visible { outline: 3px solid var(--accent-2); outline-offset: -3px; }
+
+  /* Enjekte edilen iframe */
+  .vcard__frame :global(.vcard__iframe) {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+
+  .vcard__body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); flex: 1; }
+
+  .vcard__title {
+    font-size: var(--fs-base);
+    line-height: 1.35;
+    /* Uzun başlıklar kartı bozmasın */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .vcard__title a { color: var(--ink); text-decoration: none; }
+  .vcard__title a:hover { color: var(--accent-2); }
+
+  .vcard__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: auto;
+    color: var(--ink-dim);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+  }
+
+  /* Öne çıkan varyant */
+  .vcard--featured .vcard__btn { width: 84px; height: 84px; }
+  .vcard--featured .vcard__btn svg { width: 40px; height: 40px; }
+  .vcard--featured .vcard__title { font-size: var(--fs-xl); -webkit-line-clamp: 3; line-clamp: 3; }
+  .vcard--featured .vcard__body { padding: var(--sp-5); }
+</style>

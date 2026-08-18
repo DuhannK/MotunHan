@@ -1,0 +1,139 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { href } from '../lib/href';
+import { NAV_LINKS } from '../lib/constants';
+---
+
+<BaseLayout
+  title="Sayfa bulunamadı"
+  description="Aradığın sayfa bulunamadı. Ana sayfaya dönüp oyunlara göz atabilirsin."
+>
+  <div class="wrap nf">
+    <div class="nf__art" aria-hidden="true">
+      <span class="nf__cube nf__cube--1 anim-float"></span>
+      <span class="nf__cube nf__cube--2 anim-float-slow"></span>
+      <span class="nf__cube nf__cube--3 anim-float"></span>
+      <span class="nf__code">404</span>
+    </div>
+
+    <h1 class="nf__title">Eyvah, bu sayfa kaybolmuş! 🔍</h1>
+    <p class="nf__text">
+      Aradığın sayfayı bulamadım. Belki adresi yanlış yazdın, belki de sayfa taşındı.
+      Merak etme — aşağıdan devam edebilirsin.
+    </p>
+
+    <div class="nf__actions">
+      <a class="btn btn-lg" href={href('/')}>🏠 Ana Sayfa</a>
+      <a class="btn btn-lg btn-ghost" href={href('/oyunlar')}>🎮 Oyunlar</a>
+    </div>
+
+    <nav class="nf__links" aria-label="Hızlı bağlantılar">
+      <p class="nf__links-label">Ya da şuralara bak:</p>
+      <ul>
+        {NAV_LINKS.filter((l) => l.path !== '/').map((l) => (
+          <li><a href={href(l.path)}>{l.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</BaseLayout>
+
+<style>
+  .nf {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    padding-block: var(--sp-8) var(--sp-9);
+  }
+
+  /* ---- 404 görseli ---- */
+  .nf__art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    max-width: 420px;
+    height: 190px;
+    margin-bottom: var(--sp-5);
+  }
+
+  .nf__code {
+    font-family: var(--font-display);
+    font-size: clamp(4.5rem, 3rem + 8vw, 8rem);
+    font-weight: 700;
+    line-height: 1;
+    background: linear-gradient(100deg, var(--accent-2), var(--accent-3), var(--accent));
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradient-pan 7s ease infinite;
+  }
+
+  .nf__cube {
+    position: absolute;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-3));
+    opacity: 0.65;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+  }
+  .nf__cube--1 { width: 44px; height: 44px; top: 6%;  left: 10%; rotate: 16deg; }
+  .nf__cube--2 { width: 30px; height: 30px; bottom: 8%; left: 24%; rotate: -22deg; }
+  .nf__cube--3 {
+    width: 38px; height: 38px; top: 14%; right: 12%; rotate: 30deg;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  }
+
+  .nf__title { font-size: var(--fs-2xl); margin-bottom: var(--sp-3); }
+
+  .nf__text {
+    max-width: 50ch;
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+    margin-bottom: var(--sp-6);
+  }
+
+  .nf__actions {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: var(--sp-7);
+  }
+
+  /* ---- Hızlı linkler ---- */
+  .nf__links-label { color: var(--ink-dim); font-size: var(--fs-sm); margin-bottom: var(--sp-3); }
+
+  .nf__links ul {
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    justify-content: center;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .nf__links a {
+    display: block;
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--bg-2);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    text-decoration: none;
+    transition: all var(--t-fast);
+  }
+
+  .nf__links a:hover {
+    color: var(--ink);
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+  }
+
+  @media (max-width: 620px) {
+    .nf__actions .btn { width: 100%; }
+  }
+</style>

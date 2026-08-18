@@ -1,0 +1,119 @@
+[
+  {
+    "id": "q1",
+    "question": "Anime Expeditions'ta en nadir karakter nadirliği hangisidir?",
+    "options": ["Common", "Legendary", "Secret", "Rare"],
+    "correctIndex": 2,
+    "game": "anime-expeditions",
+    "difficulty": "kolay",
+    "explanation": "Secret, oyundaki en nadir ve genelde en güçlü nadirlik seviyesidir."
+  },
+  {
+    "id": "q2",
+    "question": "Anime Expeditions'ta karakterini ekstra güçlendiren sisteme ne deniyor?",
+    "options": ["Trait", "Level", "Skin", "Pet"],
+    "correctIndex": 0,
+    "game": "anime-expeditions",
+    "difficulty": "kolay",
+    "explanation": "Trait, karaktere eklenen ekstra güçtür. Aynı karakterin trait'li hali çok daha güçlüdür."
+  },
+  {
+    "id": "q3",
+    "question": "Storage Hunters'ta depoyu satın almadan önce içindekileri görebilir misin?",
+    "options": ["Evet, hepsini görebilirsin", "Hayır, sürpriz!", "Sadece Robux ödersen", "Sadece arkadaşınla girersen"],
+    "correctIndex": 1,
+    "game": "storage-hunters",
+    "difficulty": "kolay",
+    "explanation": "Deponun içinde ne olduğunu satın alıp açana kadar bilemezsin. Oyunun heyecanı da bu!"
+  },
+  {
+    "id": "q4",
+    "question": "Storage Hunters'ta yeni başlayan biri için en akıllıca hareket hangisi?",
+    "options": [
+      "Tüm parayı en pahalı depoya yatırmak",
+      "Ucuz depolardan başlayıp parayı büyütmek",
+      "Hiç depo almamak",
+      "Sadece en büyük depolara bakmak"
+    ],
+    "correctIndex": 1,
+    "game": "storage-hunters",
+    "difficulty": "orta",
+    "explanation": "Ucuzdan başlayıp sermayeni büyütmek en güvenli yol. Tüm paranı tek depoya yatırırsan batabilirsin."
+  },
+  {
+    "id": "q5",
+    "question": "Anime Expeditions'ta her gün yapman gereken, bedava ödül veren görevlere ne deniyor?",
+    "options": ["Raid", "Günlük görevler", "Boss savaşı", "Turnuva"],
+    "correctIndex": 1,
+    "game": "anime-expeditions",
+    "difficulty": "kolay",
+    "explanation": "Günlük görevler (günlükler) her gün yenilenir ve düzenli yapan oyuncu çok daha hızlı ilerler."
+  },
+  {
+    "id": "q6",
+    "question": "Yeni çıkan bir oyuna erken başlamanın en büyük avantajı nedir?",
+    "options": [
+      "Oyun daha ucuz olur",
+      "Herkes aynı noktadan başlar, geride kalmazsın",
+      "Daha az reklam olur",
+      "Karakterler bedava olur"
+    ],
+    "correctIndex": 1,
+    "game": "anime-origins",
+    "difficulty": "orta",
+    "explanation": "Yeni oyunlarda kimsenin birikimi yoktur. Erken başlarsan eski oyunculara göre geride kalmazsın."
+  },
+  {
+    "id": "q7",
+    "question": "Bir oyun sana 'SADECE 5 DAKİKA KALDI, HEMEN AL!' diyorsa bu ne anlama gelir?",
+    "options": [
+      "Gerçekten acele etmelisin",
+      "Acele ettirip düşünmeden para harcatmaya çalışıyor",
+      "Oyun kapanıyor",
+      "Ödül daha büyük olacak"
+    ],
+    "correctIndex": 1,
+    "difficulty": "orta",
+    "explanation": "Buna 'aciliyet hissi' denir. Oyunlar seni düşünmeden harcatmak için kullanır. Sakin ol, acele etme!"
+  },
+  {
+    "id": "q8",
+    "question": "Robux harcamadan önce ne yapmalısın?",
+    "options": [
+      "Hemen almalısın, fırsat kaçar",
+      "Ailene sormalısın",
+      "Arkadaşına sormalısın",
+      "Hiçbir şey, sorun yok"
+    ],
+    "correctIndex": 1,
+    "difficulty": "kolay",
+    "explanation": "Robux gerçek para demektir. Harcamadan önce mutlaka ailenden izin al."
+  },
+  {
+    "id": "q9",
+    "question": "Bir oyunda 'bedava Robux veriyorum' diyen birine ne yapmalısın?",
+    "options": [
+      "Şifreni vermelisin",
+      "Hesabına giriş yapmasına izin vermelisin",
+      "İnanmamalısın, bu bir dolandırıcılık",
+      "Ona Robux göndermelisin"
+    ],
+    "correctIndex": 2,
+    "difficulty": "kolay",
+    "explanation": "Bedava Robux veren kimse yoktur. Bunlar hesabını çalmak isteyen dolandırıcılardır. Şifreni ASLA kimseye verme!"
+  },
+  {
+    "id": "q10",
+    "question": "Anime Expeditions'ta Robux harcamadan oynayabilir misin?",
+    "options": [
+      "Hayır, imkânsız",
+      "Evet, sadece biraz daha yavaş ilerlersin",
+      "Sadece ilk gün",
+      "Sadece arkadaşınla"
+    ],
+    "correctIndex": 1,
+    "game": "anime-expeditions",
+    "difficulty": "orta",
+    "explanation": "Oyun Robux harcamadan da rahatça oynanır. Sabırlı olmak yeterli!"
+  }
+]

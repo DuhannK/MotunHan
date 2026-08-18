@@ -1,0 +1,293 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CharacterCard from '../components/CharacterCard.astro';
+import SubscribeCTA from '../components/SubscribeCTA.astro';
+
+const games = (await getCollection('games', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const gameTitles = new Map(games.map((g) => [g.id, g.data.title]));
+
+const characters = await getCollection('characters');
+
+const TIER_ORDER = { S: 0, A: 1, B: 2, C: 3, D: 4 } as const;
+const sorted = [...characters].sort(
+  (a, b) =>
+    TIER_ORDER[a.data.tier] - TIER_ORDER[b.data.tier] ||
+    a.data.name.localeCompare(b.data.name, 'tr'),
+);
+
+const TIERS = ['S', 'A', 'B', 'C', 'D'] as const;
+// Sadece elimizde karakteri olan oyunları filtre olarak göster
+const gamesWithChars = games.filter((g) => characters.some((c) => c.data.game === g.id));
+---
+
+<BaseLayout
+  title="Karakterler"
+  description="Roblox oyunlarındaki karakterler, tier'ları ve nasıl alındıkları. İsme göre ara, tier ve oyuna göre filtrele."
+>
+  <div class="wrap">
+    <header class="page-head reveal">
+      <h1 class="page-title">Karakterler</h1>
+      <p class="page-lead">
+        Hangi karakter ne kadar güçlü ve nasıl alınıyor? Ara, filtrele, öğren.
+      </p>
+    </header>
+
+    <!-- ---------- Filtre paneli ---------- -->
+    <div class="filters reveal" data-filters>
+      <div class="filters__search">
+        <label class="visually-hidden" for="ara">Karakter ara</label>
+        <span class="filters__icon" aria-hidden="true">🔍</span>
+        <input
+          id="ara"
+          type="search"
+          placeholder="Karakter adı ara... (ör. Gohan)"
+          autocomplete="off"
+          data-search
+        />
+        <button class="filters__clear" type="button" data-clear hidden aria-label="Aramayı temizle">
+          ✕
+        </button>
+      </div>
+
+      <fieldset class="chips">
+        <legend class="chips__label">Tier</legend>
+        <button class="chip is-on" type="button" data-tier="all">Tümü</button>
+        {TIERS.map((t) => (
+          <button class={`chip chip--tier-${t.toLowerCase()}`} type="button" data-tier={t}>{t}</button>
+        ))}
+      </fieldset>
+
+      {gamesWithChars.length > 1 && (
+        <fieldset class="chips">
+          <legend class="chips__label">Oyun</legend>
+          <button class="chip is-on" type="button" data-game="all">Tümü</button>
+          {gamesWithChars.map((g) => (
+            <button class="chip" type="button" data-game={g.id}>{g.data.title}</button>
+          ))}
+        </fieldset>
+      )}
+
+      <p class="filters__count" data-count aria-live="polite">
+        {sorted.length} karakter
+      </p>
+    </div>
+
+    <!-- ---------- Sonuçlar ---------- -->
+    <div class="grid-auto" data-results>
+      {sorted.map((c) => (
+        <div class="reveal" data-card-wrap>
+          <CharacterCard character={c} gameTitle={gameTitles.get(c.data.game)} />
+        </div>
+      ))}
+    </div>
+
+    <p class="empty" data-empty hidden>
+      😕 Aradığın karakteri bulamadım.<br />
+      Farklı bir isim dene veya filtreleri sıfırla.
+    </p>
+  </div>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<script>
+  import { foldTr } from '../lib/text';
+
+  function initExplorer() {
+    const panel = document.querySelector<HTMLElement>('[data-filters]');
+    const results = document.querySelector<HTMLElement>('[data-results]');
+    if (!panel || !results) return;
+
+    const search = panel.querySelector<HTMLInputElement>('[data-search]')!;
+    const clearBtn = panel.querySelector<HTMLButtonElement>('[data-clear]')!;
+    const countEl = panel.querySelector<HTMLElement>('[data-count]')!;
+    const emptyEl = document.querySelector<HTMLElement>('[data-empty]')!;
+    const wraps = Array.from(results.querySelectorAll<HTMLElement>('[data-card-wrap]'));
+
+    let tier = 'all';
+    let game = 'all';
+
+    // Türkçe I/İ/ı sorunu ve aksanlar için ortak normalleştirme (bkz. lib/text.ts).
+    // Kart üzerindeki data-name değerleri de build sırasında aynı fonksiyondan geçti.
+    const norm = foldTr;
+
+    function apply() {
+      const q = norm(search.value);
+      let shown = 0;
+
+      for (const wrap of wraps) {
+        const card = wrap.querySelector<HTMLElement>('[data-character]');
+        if (!card) continue;
+
+        const okTier = tier === 'all' || card.dataset.tier === tier;
+        const okGame = game === 'all' || card.dataset.game === game;
+        const okText =
+          q === '' ||
+          (card.dataset.name ?? '').includes(q) ||
+          (card.dataset.rarity ?? '').includes(q);
+
+        const visible = okTier && okGame && okText;
+        wrap.hidden = !visible;
+        if (visible) shown++;
+      }
+
+      countEl.textContent = `${shown} karakter`;
+      emptyEl.hidden = shown > 0;
+      clearBtn.hidden = search.value === '';
+    }
+
+    // Chip'lerde tek seçim: aynı gruptaki diğerlerini kapat
+    panel.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.chip');
+      if (!btn) return;
+
+      const group = btn.dataset.tier !== undefined ? 'tier' : 'game';
+      const value = group === 'tier' ? btn.dataset.tier! : btn.dataset.game!;
+
+      if (group === 'tier') tier = value;
+      else game = value;
+
+      btn
+        .closest('fieldset')!
+        .querySelectorAll('.chip')
+        .forEach((c) => c.classList.toggle('is-on', c === btn));
+
+      apply();
+    });
+
+    search.addEventListener('input', apply);
+    clearBtn.addEventListener('click', () => {
+      search.value = '';
+      search.focus();
+      apply();
+    });
+
+    apply();
+  }
+
+  document.addEventListener('astro:page-load', initExplorer);
+</script>
+
+<style>
+  .page-head { max-width: 62ch; margin-bottom: var(--sp-6); }
+  .page-title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+  .page-lead { color: var(--ink-soft); font-size: var(--fs-lg); }
+
+  /* ---------- Filtreler ---------- */
+  .filters {
+    display: grid;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+    margin-bottom: var(--sp-6);
+    background: var(--bg-2);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: var(--r-lg);
+    position: sticky;
+    top: var(--header-h);
+    z-index: 20;
+    backdrop-filter: blur(10px);
+  }
+
+  .filters__search { position: relative; display: flex; align-items: center; }
+
+  .filters__icon { position: absolute; left: var(--sp-4); pointer-events: none; opacity: 0.7; }
+
+  .filters__search input {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-8);
+    min-height: 50px;
+    background: var(--bg-3);
+    border: 2px solid transparent;
+    border-radius: var(--r-pill);
+    color: var(--ink);
+    font-size: var(--fs-base);
+    transition: border-color var(--t-fast);
+  }
+  .filters__search input::placeholder { color: var(--ink-dim); }
+  .filters__search input:focus { outline: none; border-color: var(--accent); }
+
+  .filters__clear {
+    position: absolute;
+    right: var(--sp-3);
+    width: 32px;
+    height: 32px;
+    background: rgb(255 255 255 / 0.1);
+    border: none;
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .filters__clear:hover { background: var(--accent); color: var(--accent-ink); }
+
+  .chips {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .chips__label {
+    padding: 0;
+    margin-right: var(--sp-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .chip {
+    padding: var(--sp-2) var(--sp-4);
+    min-height: 40px;
+    background: var(--bg-3);
+    border: 2px solid transparent;
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition: all var(--t-fast);
+  }
+
+  .chip:hover { color: var(--ink); border-color: var(--accent-line); }
+
+  .chip.is-on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+    box-shadow: var(--glow);
+  }
+
+  /* Tier chip'leri kendi renginde vurgulanır */
+  .chip--tier-s.is-on { background: var(--tier-s); color: #2a1e02; }
+  .chip--tier-a.is-on { background: var(--tier-a); color: #2a0a1c; }
+  .chip--tier-b.is-on { background: var(--tier-b); color: #1a0a2e; }
+  .chip--tier-c.is-on { background: var(--tier-c); color: #04212e; }
+  .chip--tier-d.is-on { background: var(--tier-d); color: #16181c; }
+
+  .filters__count {
+    color: var(--ink-dim);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+  }
+
+  .empty {
+    padding: var(--sp-8) var(--sp-4);
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+    line-height: 1.8;
+  }
+
+  @media (max-width: 620px) {
+    .filters { position: static; padding: var(--sp-4); }
+  }
+</style>

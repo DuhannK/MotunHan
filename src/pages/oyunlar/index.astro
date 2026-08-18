@@ -1,0 +1,57 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GameCard from '../../components/GameCard.astro';
+import SubscribeCTA from '../../components/SubscribeCTA.astro';
+import { getVideosForGame } from '../../lib/videos';
+
+const games = (await getCollection('games', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+const guides = await getCollection('guides', ({ data }) => !data.draft);
+
+const counts = new Map(
+  games.map((g) => [
+    g.id,
+    {
+      guides: guides.filter((gd) => gd.data.game === g.id).length,
+      videos: getVideosForGame(g.data.videoKeywords).length,
+    },
+  ]),
+);
+---
+
+<BaseLayout
+  title="Oyunlar"
+  description="MotunHan'ın anlattığı tüm Roblox oyunları: Anime Expeditions, Anime Origins ve Storage Hunters. Her oyun için rehberler, videolar ve karakter listeleri."
+>
+  <div class="wrap">
+    <header class="page-head reveal">
+      <h1 class="page-title">Oyunlar</h1>
+      <p class="page-lead">
+        Her oyunun kendi sayfası var: oyun nasıl oynanır, hangi karakterler var,
+        nasıl alınır ve hangi videoyu izlemelisin — hepsi bir arada.
+      </p>
+    </header>
+
+    <div class="grid-auto stagger">
+      {games.map((game) => (
+        <div class="reveal">
+          <GameCard
+            game={game}
+            guideCount={counts.get(game.id)?.guides ?? 0}
+            videoCount={counts.get(game.id)?.videos ?? 0}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<style>
+  .page-head { max-width: 62ch; margin-bottom: var(--sp-7); }
+  .page-title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+  .page-lead { color: var(--ink-soft); font-size: var(--fs-lg); }
+</style>

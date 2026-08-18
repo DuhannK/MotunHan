@@ -1,0 +1,18 @@
+[
+  {
+    "id": "ornek-1",
+    "code": "ORNEKKOD1",
+    "game": "anime-expeditions",
+    "reward": "ÖRNEK KAYIT — buraya gerçek kodu yaz",
+    "status": "expired",
+    "addedAt": "2026-08-18"
+  },
+  {
+    "id": "ornek-2",
+    "code": "ORNEKKOD2",
+    "game": "anime-origins",
+    "reward": "ÖRNEK KAYIT — buraya gerçek kodu yaz",
+    "status": "expired",
+    "addedAt": "2026-08-18"
+  }
+]

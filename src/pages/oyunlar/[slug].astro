@@ -1,0 +1,343 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import VideoCard from '../../components/VideoCard.astro';
+import CharacterCard from '../../components/CharacterCard.astro';
+import CodeCard from '../../components/CodeCard.astro';
+import SubscribeCTA from '../../components/SubscribeCTA.astro';
+import { href, asset } from '../../lib/href';
+import { guideUrl, sortGuides } from '../../lib/guides';
+import { getVideosForGame, thumbnailUrl, getVideoById } from '../../lib/videos';
+import { GUIDE_CATEGORIES, DIFFICULTIES } from '../../lib/constants';
+
+export async function getStaticPaths() {
+  const games = await getCollection('games', ({ data }) => !data.draft);
+  return games.map((game) => ({ params: { slug: game.id }, props: { game } }));
+}
+
+const { game } = Astro.props;
+const {
+  title, tagline, description, cover, accentColor, genre,
+  difficulty, playerCount, robloxUrl, featuredVideoId, videoKeywords,
+} = game.data;
+
+const { Content } = await render(game);
+
+const guides = sortGuides(
+  await getCollection('guides', ({ data }) => data.game === game.id && !data.draft),
+);
+const characters = await getCollection('characters', ({ data }) => data.game === game.id);
+const codes = (await getCollection('codes', ({ data }) => data.game === game.id)).sort(
+  (a, b) => Number(b.data.status === 'active') - Number(a.data.status === 'active'),
+);
+
+const featured = featuredVideoId ? getVideoById(featuredVideoId) : undefined;
+// Öne çıkan video zaten yukarıda gösteriliyor, listede tekrar etmesin
+const videos = getVideosForGame(videoKeywords).filter((v) => v.id !== featuredVideoId);
+
+const coverSrc = cover
+  ? asset(cover)
+  : featuredVideoId
+    ? thumbnailUrl(featuredVideoId, 'maxres')
+    : null;
+
+const diff = DIFFICULTIES[difficulty];
+
+// Tier sıralaması S > A > B > C > D
+const TIER_ORDER = { S: 0, A: 1, B: 2, C: 3, D: 4 } as const;
+const sortedChars = [...characters].sort(
+  (a, b) =>
+    TIER_ORDER[a.data.tier] - TIER_ORDER[b.data.tier] ||
+    a.data.name.localeCompare(b.data.name, 'tr'),
+);
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  accent={accentColor}
+  ogImage={coverSrc ?? undefined}
+  bleed
+>
+  <!-- ---------- Oyun başlığı ---------- -->
+  <header class="ghero">
+    {coverSrc && (
+      <img
+        class="ghero__bg"
+        src={coverSrc}
+        alt=""
+        aria-hidden="true"
+        transition:name={`game-cover-${game.id}`}
+      />
+    )}
+    <div class="ghero__veil"></div>
+
+    <div class="wrap ghero__inner">
+      <nav class="crumbs" aria-label="Konum">
+        <a href={href('/')}>Ana Sayfa</a>
+        <span aria-hidden="true">/</span>
+        <a href={href('/oyunlar')}>Oyunlar</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{title}</span>
+      </nav>
+
+      <h1 class="ghero__title" transition:name={`game-title-${game.id}`}>{title}</h1>
+      <p class="ghero__tagline">{tagline}</p>
+
+      <ul class="ghero__meta">
+        <li class="badge" style={`--accent:${diff.color}`}>⚡ {diff.label}</li>
+        {playerCount && <li class="badge">👥 {playerCount}</li>}
+        {genre.map((g) => <li class="badge">{g}</li>)}
+      </ul>
+
+      <div class="ghero__actions">
+        {robloxUrl && (
+          <a class="btn btn-lg" href={robloxUrl} target="_blank" rel="noopener noreferrer">
+            🎮 Roblox'ta Oyna
+          </a>
+        )}
+        {guides.length > 0 && (
+          <a class="btn btn-lg btn-ghost" href="#rehberler">📘 Rehberlere Git</a>
+        )}
+      </div>
+    </div>
+  </header>
+
+  <!-- ---------- Öne çıkan eğitim videosu ---------- -->
+  {featured && (
+    <section class="section wrap">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Önce bunu izle</h2>
+          <p class="section-sub">Oyuna başlamadan önce izlemen gereken video.</p>
+        </div>
+      </div>
+      <div class="featured reveal">
+        <VideoCard video={featured} featured headingLevel={3} />
+      </div>
+    </section>
+  )}
+
+  <!-- ---------- Oyun anlatımı (markdown) ---------- -->
+  <section class="section wrap-narrow">
+    <div class="prose reveal">
+      <Content />
+    </div>
+  </section>
+
+  <!-- ---------- Rehberler ---------- -->
+  {guides.length > 0 && (
+    <section class="section wrap" id="rehberler">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Rehberler</h2>
+          <p class="section-sub">Adım adım anlatımlar — hangisini öğrenmek istersin?</p>
+        </div>
+      </div>
+
+      <div class="glist stagger">
+        {guides.map((guide) => {
+          const cat = GUIDE_CATEGORIES[guide.data.category];
+          const gdiff = DIFFICULTIES[guide.data.difficulty];
+          return (
+            <a class="gitem card reveal" href={guideUrl(guide)}>
+              <span class="gitem__icon" aria-hidden="true">{cat.icon}</span>
+              <div class="gitem__body">
+                <span class="gitem__cat">{cat.label}</span>
+                <h3 class="gitem__title">{guide.data.title}</h3>
+                <p class="gitem__desc">{guide.data.description}</p>
+              </div>
+              <span class="badge gitem__diff" style={`--accent:${gdiff.color}`}>{gdiff.label}</span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  )}
+
+  <!-- ---------- Karakterler ---------- -->
+  {sortedChars.length > 0 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Karakterler</h2>
+          <p class="section-sub">Bu oyundaki karakterler ve nasıl alındıkları.</p>
+        </div>
+        <a class="btn btn-ghost" href={href('/karakterler')}>Tüm karakterler →</a>
+      </div>
+
+      <div class="grid-auto stagger">
+        {sortedChars.slice(0, 6).map((c) => (
+          <div class="reveal"><CharacterCard character={c} /></div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- ---------- Kodlar ---------- -->
+  {codes.length > 0 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Kodlar</h2>
+          <p class="section-sub">Bu oyunun bedava ödül kodları.</p>
+        </div>
+        <a class="btn btn-ghost" href={href('/kodlar')}>Tüm kodlar →</a>
+      </div>
+
+      <div class="grid-auto stagger">
+        {codes.slice(0, 4).map((c) => (
+          <div class="reveal"><CodeCard entry={c} /></div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- ---------- Bu oyunun videoları ---------- -->
+  {videos.length > 0 && (
+    <section class="section wrap">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">{title} videoları</h2>
+          <p class="section-sub">Kanaldaki bu oyunla ilgili tüm videolar.</p>
+        </div>
+      </div>
+
+      <div class="grid-auto stagger">
+        {videos.map((v) => (
+          <div class="reveal"><VideoCard video={v} /></div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <SubscribeCTA />
+</BaseLayout>
+
+<style>
+  /* ---------- Oyun başlığı ---------- */
+  .ghero {
+    position: relative;
+    display: grid;
+    align-items: end;
+    min-height: min(62dvh, 520px);
+    padding-block: var(--sp-8) var(--sp-7);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .ghero__bg {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(1.15);
+  }
+
+  /**
+   * Görselin üstüne perde. Kapak çoğunlukla video thumbnail'i olduğu için
+   * üstünde büyük yazılar olabiliyor; soldan sağa koyulaştırarak başlığın
+   * durduğu sol tarafı temizliyoruz, görsel sağda nefes alıyor.
+   */
+  .ghero__veil {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(90deg, rgb(11 10 26 / 0.94) 0%, rgb(11 10 26 / 0.78) 42%, rgb(11 10 26 / 0.35) 100%),
+      linear-gradient(180deg, rgb(11 10 26 / 0.5) 0%, rgb(11 10 26 / 0.75) 58%, var(--bg) 100%),
+      radial-gradient(70% 60% at 20% 30%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 70%);
+  }
+
+  /* Dar ekranda metin görselin üstünü tamamen kaplıyor, perde de tam kapatsın */
+  @media (max-width: 760px) {
+    .ghero__veil {
+      background:
+        linear-gradient(180deg, rgb(11 10 26 / 0.72) 0%, rgb(11 10 26 / 0.88) 55%, var(--bg) 100%),
+        radial-gradient(80% 60% at 30% 25%, color-mix(in oklab, var(--accent) 30%, transparent), transparent 70%);
+    }
+  }
+
+  .ghero__inner { position: relative; }
+
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--ink-dim);
+    flex-wrap: wrap;
+  }
+  .crumbs a { color: var(--ink-soft); text-decoration: none; }
+  .crumbs a:hover { color: var(--accent-2); }
+
+  .ghero__title { font-size: var(--fs-3xl); margin-bottom: var(--sp-3); }
+
+  .ghero__tagline {
+    max-width: 56ch;
+    color: var(--ink-soft);
+    font-size: var(--fs-lg);
+    margin-bottom: var(--sp-4);
+  }
+
+  .ghero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--sp-5);
+  }
+
+  .ghero__actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
+  .featured { max-width: 900px; margin-inline: auto; }
+
+  /* ---------- Rehber listesi ---------- */
+  .glist { display: grid; gap: var(--sp-4); }
+
+  .gitem {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-4);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .gitem__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 56px;
+    height: 56px;
+    background: var(--accent-soft);
+    border-radius: var(--r-md);
+    font-size: 1.7rem;
+  }
+
+  .gitem__body { flex: 1; min-width: 0; }
+
+  .gitem__cat {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--accent-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .gitem__title { font-size: var(--fs-lg); margin-block: 2px 4px; }
+  .gitem__desc { color: var(--ink-soft); font-size: var(--fs-sm); }
+
+  .gitem__diff { flex: none; }
+
+  @media (max-width: 620px) {
+    .gitem { flex-wrap: wrap; }
+    .gitem__diff { margin-left: auto; }
+    .ghero__actions .btn { width: 100%; }
+  }
+</style>

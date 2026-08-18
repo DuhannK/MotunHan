@@ -1,0 +1,26 @@
+{
+  "name": "motunhan",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "sync:videos": "node scripts/fetch-videos.mjs",
+    "prebuild": "node scripts/fetch-videos.mjs",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^7.0.5",
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^7.2.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "fast-xml-parser": "^5.11.0",
+    "typescript": "^6.0.3"
+  }
+}
